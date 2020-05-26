@@ -13,11 +13,23 @@ matrix:
     - os: linux
       dist: trusty
       sudo: required
-      env: HOST=linux-x86_64-package
+      env: HOST=linux-amd64-package
     - os: linux
       dist: trusty
       sudo: required
-      env: HOST=linux-x86_64-portable
+      env: HOST=linux-amd64-portable
+    - os: linux
+      dist: trusty
+      sudo: required
+      env: HOST=linux-i386-portable
+    - os: linux
+      dist: trusty
+      sudo: required
+      env: HOST=linux-amd64-portable-legacy
+    - os: linux
+      dist: trusty
+      sudo: required
+      env: HOST=linux-i386-portable-legacy
     - os: osx
       osx_image: xcode8.3
       env: HOST=macosx-x86_64-app
@@ -28,11 +40,25 @@ matrix:
 before_install: |
   git fetch --unshallow
 
-  if [[ "$HOST" == linux-x86_64-* ]]; then
-      docker pull ubuntu:16.04
-      docker run --name bc -v $TRAVIS_BUILD_DIR:/jk2mv --cap-add SYS_ADMIN --device /dev/fuse -td ubuntu:16.04 /bin/bash
+  if [[ "$HOST" == linux-* ]]; then
+      if [[ "$HOST" == *-amd64* ]]; then
+          IMAGE="ubuntu"
+      elif [[ "$HOST" == *-i386* ]]; then
+          IMAGE="i386/ubuntu"
+      fi
+
+      if [[ "$HOST" == *-legacy* ]]; then
+          TAG="14.04"
+      else
+          TAG="16.04"
+      fi
+
+      DOCKER="$IMAGE:$TAG"
+
+      docker pull $DOCKER
+      docker run --name bc -v $TRAVIS_BUILD_DIR:/jk2mv --cap-add SYS_ADMIN --device /dev/fuse -td $DOCKER /bin/bash
   fi
-  
+
   if [[ "$HOST" == macosx-* ]]; then
       export MACOSX_DEPLOYMENT_TARGET=10.9
   fi
@@ -40,7 +66,14 @@ before_install: |
 install: |
   if [[ "$HOST" == linux-* ]]; then
       docker exec bc apt update
-      docker exec bc apt -y install git cmake zip wget libfuse2 build-essential libsdl2-dev libgl1-mesa-dev libopenal-dev libjpeg-dev libpng-dev libminizip-dev
+      docker exec bc apt -y install git zip wget libfuse2 build-essential libsdl2-dev libgl1-mesa-dev libopenal-dev libjpeg-dev libpng-dev
+      if [[ "$HOST" != *-legacy* ]]; then
+          # Ubuntu 16.04
+          docker exec bc apt -y install libminizip-dev cmake
+      else
+          # Ubuntu 14.04
+          docker exec bc apt -y install cmake3
+      fi
   else
       cd ~
       curl -O https://www.libsdl.org/release/SDL2-2.0.10.tar.gz
@@ -57,8 +90,12 @@ script: |
   cd $TRAVIS_BUILD_DIR/build/travis
 
   if [[ "$HOST" == linux-* ]]; then
-      if [[ "$HOST" == *-portable ]]; then
-          docker exec bc sh -c "cd /jk2mv/build/travis && cmake -DUseInternalLibs=ON -DBuildPortableVersion=ON ../.."
+      if [[ "$HOST" == *-portable* ]]; then
+          CMAKE_OPTIONS="-DUseInternalLibs=ON -DBuildPortableVersion=ON"
+          if [[ "$HOST" == *-i386* ]]; then
+              CMAKE_OPTIONS="$CMAKE_OPTIONS -DSystemProcessor=i386"
+          fi;
+          docker exec bc sh -c "cd /jk2mv/build/travis && cmake $CMAKE_OPTIONS ../.."
           docker exec bc sh -c "cd /jk2mv/build/travis && make"
           docker exec bc sh -c "cd /jk2mv/build/travis && make package"
       else
