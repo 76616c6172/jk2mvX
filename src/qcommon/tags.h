@@ -78,6 +78,7 @@
 	TAGDEF(IDTABLE),					// class used primarily by Wraith and wpn sys to track unique ID's
 	TAGDEF(GORE),						// the gore manager
 */
+	TAGDEF(NETCHAN),
 	TAGDEF(COUNT)
 
 

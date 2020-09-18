@@ -94,6 +94,12 @@ void MSG_Clear (msg_t *buf);
 void MSG_WriteData (msg_t *buf, const void *data, int length);
 void MSG_Bitstream( msg_t *buf );
 
+// TTimo
+// copy a msg_t in case we need to store it as is for a bit
+// (as I needed this to keep an msg_t from a static var for later use)
+// sets data buffer as MSG_Init does prior to do the copy
+void MSG_Copy(msg_t *buf, byte *data, int length, msg_t *src);
+
 
 struct usercmd_s;
 struct entityState_s;

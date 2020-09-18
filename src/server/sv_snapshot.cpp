@@ -568,16 +568,6 @@ Called by SV_SendClientSnapshot and SV_SendClientGameState
 void SV_SendMessageToClient( msg_t *msg, client_t *client ) {
 	int			rateMsec;
 
-	// MW - my attempt to fix illegible server message errors caused by
-	// packet fragmentation of initial snapshot.
-	while(client->state&&client->netchan.unsentFragments)
-	{
-		// send additional message fragments if the last message
-		// was too large to send at once
-		Com_Printf ("[ISM]SV_SendClientGameState() [1] for %s, writing out old fragments\n", client->name);
-		SV_Netchan_TransmitNextFragment(&client->netchan);
-	}
-
 	// record information about the message
 	client->frames[client->netchan.outgoingSequence & PACKET_MASK].messageSize = msg->cursize;
 	// With sv_pingFix enabled we use a time value that is not limited by sv_fps.
@@ -689,10 +679,10 @@ void SV_SendClientMessages( void ) {
 
 		// send additional message fragments if the last message
 		// was too large to send at once
-		if ( c->netchan.unsentFragments ) {
+		if ( c->netchan.unsentFragments || c->netchan_start_queue ) {
 			c->nextSnapshotTime = svs.time +
 				SV_RateMsec( c, c->netchan.unsentLength - c->netchan.unsentFragmentStart );
-			SV_Netchan_TransmitNextFragment( &c->netchan );
+			SV_Netchan_TransmitNextFragment( c );
 			continue;
 		}
 

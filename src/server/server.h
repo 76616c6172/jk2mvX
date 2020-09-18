@@ -117,6 +117,13 @@ typedef struct leakyBucket_s {
 	unsigned short		burst;
 } leakyBucket_t;
 
+typedef struct netchan_buffer_s {
+	msg_t           msg;
+	byte            msgBuffer[MAX_MSGLEN];
+	char			lastClientCommandString[MAX_STRING_CHARS];
+	struct netchan_buffer_s *next;
+} netchan_buffer_t;
+
 typedef struct client_s {
 	clientState_t	state;
 	char			userinfo[MAX_INFO_STRING];		// name, etc
@@ -169,6 +176,12 @@ typedef struct client_s {
 
 	int				lastUserInfoChange; //if > svs.time && count > x, deny change -rww
 	int				lastUserInfoCount; //allow a certain number of changes within a certain time period -rww
+	// TTimo
+	// queuing outgoing fragmented messages to send them properly, without udp packet bursts
+	// in case large fragmented messages are stacking up
+	// buffer them into this queue, and hand them out to netchan as needed
+	netchan_buffer_t *netchan_start_queue;
+	netchan_buffer_t **netchan_end_queue;
 } client_t;
 
 //=============================================================================
@@ -450,7 +463,7 @@ void SV_ClipToEntity( trace_t *trace, const vec3_t start, const vec3_t mins, con
 // sv_net_chan.c
 //
 void SV_Netchan_Transmit( client_t *client, msg_t *msg);	//int length, const byte *data );
-void SV_Netchan_TransmitNextFragment( netchan_t *chan );
+void SV_Netchan_TransmitNextFragment( client_t *client );
 qboolean SV_Netchan_Process( client_t *client, msg_t *msg );
 
 #endif // SERVER_H_INC

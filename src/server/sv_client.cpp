@@ -295,6 +295,9 @@ gotnewcl:
 	// save the address
 	Netchan_Setup (NS_SERVER, &newcl->netchan , from, qport);
 
+	// init the netchan queue
+	newcl->netchan_end_queue = &newcl->netchan_start_queue;
+
 	// save the userinfo
 	Q_strncpyz( newcl->userinfo, userinfo, sizeof(newcl->userinfo) );
 	SV_UserinfoChanged(newcl);
@@ -361,6 +364,7 @@ or crashing -- SV_FinalMessage() will handle that
 void SV_DropClient( client_t *drop, const char *reason ) {
 	int		i;
 	challenge_t	*challenge;
+	netchan_buffer_t *removeNetchan;
 
 	if ( drop->state == CS_ZOMBIE ) {
 		return;		// already dropped
@@ -389,6 +393,14 @@ void SV_DropClient( client_t *drop, const char *reason ) {
 			}
 		}
 	}
+
+	// Free netchan queue
+	while ( (removeNetchan = drop->netchan_start_queue) )
+	{
+		drop->netchan_start_queue = drop->netchan_start_queue->next;
+		Z_Free( removeNetchan );
+	}
+	drop->netchan_end_queue = &drop->netchan_start_queue; // We shouldn't really need this, but it's cleaner and doesn't hurt
 
 	// Kill any download
 	SV_CloseDownload( drop );
@@ -450,17 +462,6 @@ void SV_SendClientGameState( client_t *client ) {
 	entityState_t	*base, nullstate;
 	msg_t		msg;
 	byte		msgBuffer[MAX_MSGLEN];
-
-	// MW - my attempt to fix illegible server message errors caused by
-	// packet fragmentation of initial snapshot.
-	while(client->state&&client->netchan.unsentFragments)
-	{
-		// send additional message fragments if the last message
-		// was too large to send at once
-
-		Com_Printf ("[ISM]SV_SendClientGameState() [2] for %s, writing out old fragments\n", client->name);
-		SV_Netchan_TransmitNextFragment(&client->netchan);
-	}
 
 	Com_DPrintf ("SV_SendClientGameState() for %s\n", client->name);
 	Com_DPrintf( "Going from CS_CONNECTED to CS_PRIMED for %s\n", client->name );
