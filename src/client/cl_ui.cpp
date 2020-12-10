@@ -1227,7 +1227,7 @@ void CL_InitUI(qboolean mainMenu) {
 	if ( (mainMenu && !mv_menuOverride->integer) || mv_menuOverride->integer == -1 || !uivm ) {
 		apilevel = MV_APILEVEL;
 
-		uivm = VM_Create("jk2mvmenu", qtrue, CL_UISystemCalls, VMI_NATIVE);
+		uivm = VM_Create("jk2mvmenu", qtrue, CL_UISystemCalls, (vmInterpret_t)(int)Cvar_VariableValue("vm_mvmenu"));
 		VM_SetGameversion(uivm, VERSION_UNDEF);
 	}
 

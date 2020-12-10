@@ -77,6 +77,8 @@ void VM_Init( void ) {
 	Cvar_Get( "vm_game", "2", CVAR_ARCHIVE );	// !@# SHIP WITH SET TO 2
 	Cvar_Get( "vm_ui", "2", CVAR_ARCHIVE );		// !@# SHIP WITH SET TO 2
 
+	Cvar_Get( "vm_mvmenu", "0", CVAR_ARCHIVE );
+
 	Cmd_AddCommand ("vmprofile", VM_VmProfile_f );
 	Cmd_AddCommand ("vminfo", VM_VmInfo_f );
 
@@ -278,7 +280,7 @@ void VM_LoadSymbols( vm_t *vm ) {
 		void	*v;
 	} mapfile;
 	char		name[MAX_QPATH];
-	char		symbols[MAX_QPATH];
+	char		symbols[MAX_OSPATH];
 
 	if ( vm->dllHandle ) {
 		return;
@@ -319,16 +321,39 @@ void VM_LoadSymbols( vm_t *vm ) {
 	//
 	// parse symbols
 	//
-
-	fileHandle_t	f;
-	unsigned long	crc = 0;
-	const char		*mapFile = NULL;
-
-	// load predefined map files for retail modules
 	COM_StripExtension(vm->name, name, sizeof(name));
-	Com_sprintf(symbols, sizeof( symbols ), "vm/%s.qvm", name);
-	FS_FOpenFileReadHash(symbols, &f, qfalse, &crc);
-	FS_FCloseFile(f);
+	mapfile.v = NULL;
+	if ( vm->mvOverride ) {
+		// mvOverride is only loads from fs_basepath
+		const char *path = Cvar_VariableString( "fs_basepath" );
+		FILE *f;
+		long len;
+
+		Com_sprintf( symbols, sizeof(symbols), "%s/%s.map", path, name );
+
+		f = fopen( symbols, "rb" );
+		if ( f )
+		{
+			fseek( f, 0, SEEK_END );
+			len = ftell( f );
+			fseek( f, 0, SEEK_SET );
+
+			if ( len > 0 )
+			{
+				mapfile.v = (byte*)Z_Malloc(len, TAG_FILESYS, qfalse);
+				fread( mapfile.v, 1, len, f );
+			}
+			fclose( f );
+		}
+	} else {
+		fileHandle_t	f;
+		unsigned long	crc = 0;
+		const char		*mapFile = NULL;
+
+		// load predefined map files for retail modules
+		Com_sprintf(symbols, sizeof( symbols ), "vm/%s.qvm", name);
+		FS_FOpenFileReadHash(symbols, &f, qfalse, &crc);
+		FS_FCloseFile(f);
 
 #define CRC_ASSETS0_JK2MPGAME_QVM	1115512220
 #define CRC_ASSETS2_JK2MPGAME_QVM	2662605590
@@ -340,25 +365,26 @@ void VM_LoadSymbols( vm_t *vm ) {
 #define CRC_ASSETS2_UI_QVM			2883122120
 #define CRC_ASSETS5_UI_QVM			14163
 
-	switch (crc) {
-	case CRC_ASSETS0_JK2MPGAME_QVM:	mapFile = "vm/jk2mpgame_102.map";	break;
-	case CRC_ASSETS2_JK2MPGAME_QVM:	mapFile = "vm/jk2mpgame_103.map";	break;
-	case CRC_ASSETS5_JK2MPGAME_QVM:	mapFile = "vm/jk2mpgame_104.map";	break;
-	case CRC_ASSETS0_CGAME_QVM:		mapFile = "vm/cgame_102.map";		break;
-	case CRC_ASSETS2_CGAME_QVM:		mapFile = "vm/cgame_103.map";		break;
-	case CRC_ASSETS5_CGAME_QVM:		mapFile = "vm/cgame_104.map";		break;
-	case CRC_ASSETS0_UI_QVM:		mapFile = "vm/ui_102.map";			break;
-	case CRC_ASSETS2_UI_QVM:		mapFile = "vm/ui_103.map";			break;
-	case CRC_ASSETS5_UI_QVM:		mapFile = "vm/ui_104.map";			break;
-	}
+		switch (crc) {
+		case CRC_ASSETS0_JK2MPGAME_QVM:	mapFile = "vm/jk2mpgame_102.map";	break;
+		case CRC_ASSETS2_JK2MPGAME_QVM:	mapFile = "vm/jk2mpgame_103.map";	break;
+		case CRC_ASSETS5_JK2MPGAME_QVM:	mapFile = "vm/jk2mpgame_104.map";	break;
+		case CRC_ASSETS0_CGAME_QVM:		mapFile = "vm/cgame_102.map";		break;
+		case CRC_ASSETS2_CGAME_QVM:		mapFile = "vm/cgame_103.map";		break;
+		case CRC_ASSETS5_CGAME_QVM:		mapFile = "vm/cgame_104.map";		break;
+		case CRC_ASSETS0_UI_QVM:		mapFile = "vm/ui_102.map";			break;
+		case CRC_ASSETS2_UI_QVM:		mapFile = "vm/ui_103.map";			break;
+		case CRC_ASSETS5_UI_QVM:		mapFile = "vm/ui_104.map";			break;
+		}
 
-	if (mapFile) {
-		Q_strncpyz(symbols, mapFile, sizeof(symbols));
-	} else {
-		Com_sprintf(symbols, sizeof(symbols), "vm/%s.map", name);
-	}
+		if (mapFile) {
+			Q_strncpyz(symbols, mapFile, sizeof(symbols));
+		} else {
+			Com_sprintf(symbols, sizeof(symbols), "vm/%s.map", name);
+		}
 
-	FS_ReadFile( symbols, &mapfile.v );
+		FS_ReadFile( symbols, &mapfile.v );
+	}
 
 	if ( mapfile.c ) {
 		const char *text_p;
@@ -524,21 +550,48 @@ VM_LoadQVM
 Load a .qvm file
 =================
 */
-vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc)
+vmHeader_t *VM_LoadQVM( vm_t *vm, qboolean alloc, qboolean mvOverride )
 {
 	int					dataLength;
 	int					i;
-	char				filename[MAX_QPATH];
+	char				filename[MAX_OSPATH];
 	union {
 		vmHeader_t	*h;
 		void				*v;
 	} header;
 
-	// load the image
-	Com_sprintf( filename, sizeof(filename), "vm/%s.qvm", vm->name );
-	Com_Printf( "Loading vm file %s...\n", filename );
+	if ( mvOverride )
+	{ // mvOverride is only loads from fs_basepath
+		const char *path = Cvar_VariableString( "fs_basepath" );
+		FILE *f;
+		long len;
 
-	FS_ReadFile(filename, &header.v);
+		Com_sprintf( filename, sizeof(filename), "%s/%s.qvm", path, vm->name );
+		Com_Printf( "Loading override vm file %s...\n", filename );
+
+		f = fopen( filename, "rb" );
+		if ( f )
+		{
+			fseek( f, 0, SEEK_END );
+			len = ftell( f );
+			fseek( f, 0, SEEK_SET );
+
+			if ( len > 0 )
+			{
+				header.v = (byte*)Z_Malloc(len, TAG_FILESYS, qfalse);
+				fread( header.v, 1, len, f );
+			}
+			fclose( f );
+		}
+	}
+	else
+	{
+		// load the image
+		Com_sprintf( filename, sizeof(filename), "vm/%s.qvm", vm->name );
+		Com_Printf( "Loading vm file %s...\n", filename );
+
+		FS_ReadFile(filename, &header.v);
+	}
 
 	if ( !header.h ) {
 		Com_Printf( "Failed.\n" );
@@ -655,7 +708,7 @@ vm_t *VM_Restart(vm_t *vm)
 	// load the image
 	Com_Printf("VM_Restart()\n");
 
-	if(!(header = VM_LoadQVM(vm, qfalse)))
+	if(!(header = VM_LoadQVM(vm, qfalse, vm->mvOverride)))
 	{
 		Com_Error(ERR_DROP, "VM_Restart failed");
 		return NULL;
@@ -714,6 +767,7 @@ vm_t *VM_Create( const char *module, qboolean mvOverride, intptr_t (*systemCalls
 	Q_strncpyz(vm->name, module, sizeof(vm->name));
 
 	vm->mvmenu = 0;
+	vm->mvOverride = mvOverride;
 
 	if (interpret == VMI_NATIVE) {
 		// try to load as a system dll
@@ -725,16 +779,18 @@ vm_t *VM_Create( const char *module, qboolean mvOverride, intptr_t (*systemCalls
 			return vm;
 		}
 
+		/*
 		if (mvOverride) {
 			Com_Error(ERR_FATAL, "Failed loading library file: %s", vm->name);
 		}
+		*/
 
 		Com_Printf("Failed to load library, looking for qvm.\n");
 		interpret = VMI_COMPILED;
 	}
 
 	vm->searchPath = startSearch;
-	if ((header = VM_LoadQVM(vm, qtrue)) == NULL) {
+	if ((header = VM_LoadQVM(vm, qtrue, mvOverride)) == NULL) {
 		return NULL;
 	}
 
