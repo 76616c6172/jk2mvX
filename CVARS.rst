@@ -45,6 +45,19 @@ New and Modified Cvars
    | ``fs_game cvar``
    | ``fs_forcegame cvar``
 
+..
+
+:Name: fs_inactivePacks
+:Values: "0", "1"
+:Default: "0"
+:Description:
+   Closes pk3 file handle after indexing the pk3 file. The pk3 gets reopened
+   once a file inside the pk3 is accessed. This can help user with a lot of pk3
+   files to get around system limits if the pk3s aren't all active. If an
+   inactive pk3 is modified by another application on disk this is going to
+   cause issues, because the indexed content doesn't match the real file
+   anymore.
+
 -----------
 Client-Side
 -----------

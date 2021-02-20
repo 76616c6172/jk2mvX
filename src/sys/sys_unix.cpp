@@ -96,8 +96,6 @@ qboolean Sys_Mkdir( const char *path )
 
 //============================================
 
-#define	MAX_FOUND_FILES	0x1000
-
 // bk001129 - new in 1.26
 static void Sys_ListFilteredFiles( const char *basedir, char *subdirs, char *filter, const char **list, int *numfiles ) {
 	char		search[MAX_OSPATH], newsubdirs[MAX_OSPATH];

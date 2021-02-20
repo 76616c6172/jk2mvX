@@ -185,7 +185,7 @@ or configs will never get loaded from disk!
 */
 
 #define MAX_ZPATH			256
-#define	MAX_SEARCH_PATHS	4096
+#define	MAX_SEARCH_PATHS	MAX_FOUND_FILES // 4096
 #define MAX_FILEHASH_SIZE	1024
 
 typedef struct fileInPack_s {
@@ -239,6 +239,7 @@ static	cvar_t		*fs_basegame;
 static	cvar_t		*fs_copyfiles;
 static	cvar_t		*fs_gamedirvar;
 static	cvar_t		*fs_forcegame;
+static	cvar_t		*fs_inactivePacks;
 static	searchpath_t	*fs_searchpaths;
 static	int			fs_readCount;			// total bytes read
 static	int			fs_loadCount;			// total files read
@@ -1237,6 +1238,25 @@ const char *get_filename_ext(const char *filename) {
 	return dot + 1;
 }
 
+static inline int FS_LoadInactivePack( pack_t *pak )
+{
+	unz_global_info gi;
+	int err;
+
+	if ( !pak->handle ) {
+		if ( pak->pakFilename ) {
+			pak->handle = unzOpen( pak->pakFilename );
+			err = unzGetGlobalInfo( pak->handle, &gi );
+
+			if ( err != UNZ_OK ) {
+				pak->handle = NULL;
+			}
+		}
+		if ( !pak->handle ) return 0;
+	}
+	return 1;
+}
+
 /*
 ===========
 FS_PakReadFile
@@ -1252,6 +1272,9 @@ int FS_PakReadFile(pack_t *pak, const char *filename, char *buffer, int bufferle
 	pakFile = pak->hashTable[hash];
 	if (pakFile) {
 		do {
+			if ( !FS_LoadInactivePack(pak) ) {
+				Com_Error( ERR_FATAL, "Couldn't open %s", pak->pakFilename );
+			}
 			// case and separator insensitive comparisons
 			if (!FS_FilenameCompare(pakFile->name, filename)) {
 				unzSetOffset(pak->handle, pakFile->pos);
@@ -1431,8 +1454,12 @@ int FS_FOpenFileReadHash(const char *filename, fileHandle_t *file, qboolean uniq
 
 						if (fsh[*file].handleFiles.file.z == NULL)
 							Com_Error(ERR_FATAL, "Couldn't open %s", pak->pakFilename);
-					} else
+					} else {
+						if ( !FS_LoadInactivePack(pak) )
+							Com_Error(ERR_FATAL, "Couldn't open %s", pak->pakFilename);
+
 						fsh[*file].handleFiles.file.z = pak->handle;
+					}
 
 					Q_strncpyz(fsh[*file].name, filename, sizeof(fsh[*file].name));
 					fsh[*file].zipFile = qtrue;
@@ -2052,7 +2079,11 @@ static pack_t *FS_LoadZipFile( char *zipfile, const char *basename )
 		pack->pakBasename[strlen( pack->pakBasename ) - 4] = 0;
 	}
 
-	pack->handle = uf;
+	if ( fs_inactivePacks && fs_inactivePacks->integer ) {
+		pack->handle = NULL;
+	} else {
+		pack->handle = uf;
+	}
 	pack->numfiles = gi.number_entry;
 	unzGoToFirstFile(uf);
 
@@ -2076,6 +2107,10 @@ static pack_t *FS_LoadZipFile( char *zipfile, const char *basename )
 		buildBuffer[i].next = pack->hashTable[hash];
 		pack->hashTable[hash] = &buildBuffer[i];
 		unzGoToNextFile(uf);
+	}
+
+	if ( fs_inactivePacks && fs_inactivePacks->integer ) {
+		unzClose(uf);
 	}
 
 	pack->checksum = Com_BlockChecksum( fs_headerLongs, 4 * fs_numHeaderLongs );
@@ -2145,8 +2180,6 @@ DIRECTORY SCANNING FUNCTIONS
 */
 
 static void FS_SortFileList(const char **filelist, int numfiles);
-
-#define	MAX_FOUND_FILES	0x1000
 
 static int FS_ReturnPath( const char *zname, char *zpath, int *depth ) {
 	int len, at, newdep;
@@ -2768,7 +2801,8 @@ void FS_Path_f( void ) {
 	Com_Printf ("Current search path:\n");
 	for (s = fs_searchpaths; s; s = s->next) {
 		if (s->pack) {
-			Com_Printf ("%s (%i files) [ %s%s%s%s]\n", s->pack->pakFilename, s->pack->numfiles,
+			Com_Printf ("%s (%i files)%s [ %s%s%s%s]\n", s->pack->pakFilename, s->pack->numfiles,
+				s->pack->handle ? " (active)" : "",
 				s->pack->gvc == PACKGVC_UNKNOWN ? "unknown " : "",
 				s->pack->gvc & PACKGVC_1_02 ? "1.02 " : "",
 				s->pack->gvc & PACKGVC_1_03 ? "1.03 " : "",
@@ -2940,7 +2974,6 @@ const char *get_filename(const char *path) {
 	return slash + 1;
 }
 
-#define	MAX_PAKFILES	1024
 static void FS_AddGameDirectory( const char *path, const char *dir, qboolean assetsOnly ) {
 	searchpath_t	*sp;
 	int				i;
@@ -2988,10 +3021,6 @@ static void FS_AddGameDirectory( const char *path, const char *dir, qboolean ass
 
 	// sort them so that later alphabetic matches override
 	// earlier ones.  This makes pak1.pk3 override pak0.pk3
-	if ( numfiles > MAX_PAKFILES ) {
-		numfiles = MAX_PAKFILES;
-	}
-
 	qsort( pakfiles, numfiles, sizeof(void *), paksort );
 
 	for ( i = 0 ; i < numfiles ; i++ ) {
@@ -3024,7 +3053,7 @@ static void FS_AddGameDirectory( const char *path, const char *dir, qboolean ass
 
 			if (!found) {
 				// server has no interest in the file
-				unzClose(pak->handle);
+				if ( pak->handle ) unzClose(pak->handle);
 				Z_Free(pak->buildBuffer);
 				Z_Free(pak);
 				continue;
@@ -3263,7 +3292,7 @@ void FS_Shutdown( qboolean closemfp ) {
 		next = p->next;
 
 		if ( p->pack ) {
-			unzClose(p->pack->handle);
+			if ( p->pack->handle ) unzClose(p->pack->handle);
 			Z_Free( p->pack->buildBuffer );
 			Z_Free( p->pack );
 		}
@@ -3310,6 +3339,8 @@ static void FS_Startup( const char *gameName ) {
 
 	assetsPath = Sys_DefaultAssetsPath();
 	fs_assetspath = Cvar_Get("fs_assetspath", assetsPath ? assetsPath : "", CVAR_INIT | CVAR_VM_NOWRITE);
+
+	fs_inactivePacks = Cvar_Get( "fs_inactivePacks", "0", CVAR_ARCHIVE );
 
 	if (!FS_AllPath_Base_FileExists("assets5.pk3")) {
 		// assets files found in none of the paths
