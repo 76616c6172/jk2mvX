@@ -263,6 +263,7 @@ extern	cvar_t	*mv_apiConnectionless;
 extern	cvar_t	*sv_pingFix;
 extern	cvar_t	*sv_autoWhitelist;
 extern	cvar_t	*sv_dynamicSnapshots;
+extern	cvar_t	*sv_submodelWorkaround;
 
 // toggleable fixes
 extern	cvar_t	*mv_fixnamecrash;

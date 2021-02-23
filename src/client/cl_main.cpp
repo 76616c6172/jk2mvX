@@ -2771,6 +2771,48 @@ void CL_SetForcePowers_f( void ) {
 #endif
 
 /*
+=================
+MV_UpdateClFlags
+
+Called by CL_Init. Updates the mv_clFlags accoding to the current settings
+
+At the time of initial implementation there is only one clFlag that is always active, so the function is not required, yet.
+However in future versions users might be able to disable some of the features, so the clFlags need to be adjusted in such cases
+=================
+*/
+void MV_UpdateClFlags( void )
+{
+	// mv_clFlags - Used to inform the server about available jk2mv clientside features
+	static cvar_t *mv_clFlags;
+	char *value;
+	int intValue = 0;
+
+	// Check for the features and determine the flags
+	intValue |= MV_CLFLAG_SUBMODEL_NOLIMIT;
+
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	// !!! Forks of JK2MV should NOT modify the mv_clFlags                             !!!
+	// !!! Removal, replacement or adding of new flags might lead to incompatibilities !!!
+	// !!! Forks should define their own userinfo cvar instead of modifying this       !!!
+	// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+	// If the current clFlags match the intValue we can return
+	if ( mv_clFlags && mv_clFlags->integer == intValue ) return;
+
+	// We need a string when registering/setting the cvar
+	value = va("%i", intValue);
+
+	if ( !mv_clFlags )
+	{ // Register the cvar as rom, internal and userinfo for the server to see, but without users manually changing it
+		mv_clFlags = Cvar_Get( "mv_clFlags", value, CVAR_ROM|CVAR_INTERNAL|CVAR_USERINFO );
+	}
+	else
+	{ // Update the cvar
+		Cvar_Set( "mv_clFlags", value );
+	}
+}
+
+/*
 ====================
 CL_Init
 ====================
@@ -2879,6 +2921,7 @@ void CL_Init( void ) {
 	Cvar_Get ("password", "", CVAR_USERINFO);
 	Cvar_Get ("cg_predictItems", "1", CVAR_USERINFO | CVAR_ARCHIVE );
 
+	MV_UpdateClFlags();
 
 	// cgame might not be initialized before menu is used
 	Cvar_Get ("cg_viewsize", "100", CVAR_ARCHIVE );

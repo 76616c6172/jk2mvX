@@ -597,7 +597,15 @@ Ghoul2 Insert End
 	FS_PureServerSetReferencedPaks("", "");
 	FS_Restart( sv.checksumFeed );
 
-	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum );
+	// The game module isn't active at this point, so we check the value of the mvsdk submodel workaround cvar
+	// (g_submodelWorkaround, referenced as sv_submodelWorkaround in engine code). If the cvar is enabled without a
+	// compatible game module the modelindex is going to overflow on the network and negative modelindex values are
+	// going to cause clients to drop to the main menu with "CM_InlineModel: bad number" even when their local setup
+	// supports the workaround. However that's not worse than the classic behavior of dropping every client to the main
+	// menu due to MAX_SUBMODELS and the overflow happens on some smaller maps with classic jk2, too. The only reason
+	// we don't always bypass the limit here is to prevent mappers from creating maps that are exceeding the jk2 limits
+	// without them noticing it. So in order for a server to load such a map the cvar needs to be set.
+	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum, (qboolean)!!(sv_submodelWorkaround->integer & 2) );
 
 	SV_SendMapChange();
 
@@ -870,6 +878,8 @@ void SV_Init (void) {
 	sv_pingFix = Cvar_Get("sv_pingFix", "1", CVAR_ARCHIVE);
 	sv_autoWhitelist = Cvar_Get("sv_autoWhitelist", "1", CVAR_ARCHIVE | CVAR_GLOBAL);
 	sv_dynamicSnapshots = Cvar_Get("sv_dynamicSnapshots", "1", CVAR_ARCHIVE);
+
+	sv_submodelWorkaround = Cvar_Get("g_submodelWorkaround", "0", CVAR_ARCHIVE ); // g_ to sync it with the existing mvsdk cvar
 
 	SP_Register("str_server",SP_REGISTER_REQUIRED);
 

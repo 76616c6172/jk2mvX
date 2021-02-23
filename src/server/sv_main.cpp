@@ -43,6 +43,7 @@ cvar_t	*mv_apiConnectionless;
 cvar_t	*sv_pingFix;
 cvar_t	*sv_autoWhitelist;
 cvar_t	*sv_dynamicSnapshots;
+cvar_t	*sv_submodelWorkaround;
 
 // jk2mv's toggleable fixes
 cvar_t	*mv_fixnamecrash;

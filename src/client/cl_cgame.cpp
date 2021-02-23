@@ -576,7 +576,8 @@ Just adds default parameters that cgame doesn't need to know about
 void CL_CM_LoadMap( const char *mapname ) {
 	int		checksum;
 
-	CM_LoadMap( mapname, qtrue, &checksum );
+	// The client is only willing to load more than MAX_SUBMODELS if the cgame module explicitly told us to bypass the limit.
+	CM_LoadMap( mapname, qtrue, &checksum, cls.submodelBypass );
 }
 
 /*
@@ -595,6 +596,7 @@ void CL_ShutdownCGame( void ) {
 	VM_Free( cgvm );
 	cgvm = NULL;
 	cls.fixes = MVFIX_NONE;
+	cls.submodelBypass = qfalse;
 #ifdef _DONETPROFILE_
 	ClReadProf().ShowTotals();
 #endif
@@ -634,6 +636,16 @@ CL_CgameSetVirtualScreen
 void CL_CgameSetVirtualScreen(float w, float h) {
 	cls.cgxadj = SCREEN_WIDTH / w;
 	cls.cgyadj = SCREEN_HEIGHT / h;
+}
+
+/*
+====================
+CL_CgameEnableSubmodelBypass
+====================
+*/
+qboolean CL_CgameEnableSubmodelBypass( qboolean enable ) {
+	cls.submodelBypass = enable;
+	return cls.submodelBypass;
 }
 
 /*
@@ -1296,6 +1308,13 @@ Ghoul2 Insert End
 		case MVAPI_SET_VERSION:
 			VM_SetGameversion( cgvm, (mvversion_t)args[1] );
 			return 0;
+		}
+	}
+
+	if (VM_MVAPILevel(cgvm) >= 4) {
+		switch (args[0]) {
+		case CG_MVAPI_ENABLE_SUBMODELBYPASS:
+			return CL_CgameEnableSubmodelBypass( (qboolean)!!args[1] );
 		}
 	}
 

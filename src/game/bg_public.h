@@ -42,6 +42,9 @@
 
 #define MAX_CLIENT_SCORE_SEND 20
 
+// mv_clflags
+#define MV_CLFLAG_SUBMODEL_NOLIMIT          (1)             // Set by the engine in mv_clFlags to inform the server that the client engine is willing to drop the MAX_SUBMODEL limit if the server sets the flag for passing modelindex through time2.
+
 //
 // config strings are a general means of communicating variable length strings
 // from the server to all connected clients.
@@ -70,6 +73,8 @@
 #define CS_FLAGSTATUS			23		// string indicating flag status in CTF
 #define CS_SHADERSTATE			24
 #define CS_BOTINFO				25
+
+#define CS_MVSDK				26		// CS for mvsdk specific configuration
 
 #define	CS_ITEMS				27		// string of 0's and 1's that tell which items are present
 
