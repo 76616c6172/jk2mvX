@@ -316,23 +316,24 @@ jobs:
     - name: Create Build Environment
       working-directory: ${{github.workspace}}
       run: |
-        podman pull docker.io/${{ matrix.container_image }}
-        podman run --name buildenv -v ${PWD}/build/actions:/jk2mv -td docker.io/${{ github.container_image }} /bin/bash
-        podman exec buildenv apt-get update
-        podman exec buildenv apt-get install -y git zip wget libfuse2 build-essential libsdl2-dev libgl1-mesa-dev libopenal-dev libjpeg-dev libpng-dev libminizip-dev cmake rpm
+        eacho "${PWD}/build/actions:/jk2mv"
+        sudo docker pull docker.io/${{ matrix.container_image }}
+        sudo docker run --name buildenv -v ${PWD}/build/actions:/jk2mv -td docker.io/${{ github.container_image }} /bin/bash
+        sudo docker exec buildenv apt-get update
+        sudo docker exec buildenv apt-get install -y git zip wget libfuse2 build-essential libsdl2-dev libgl1-mesa-dev libopenal-dev libjpeg-dev libpng-dev libminizip-dev cmake rpm
         mkdir -p ${{github.workspace}}/build/actions
 
     - name: Configure CMake
       shell: bash
-      run: podman exec -w /jk2mv/build/actions buildenv cmake -G "Unix Makefiles" ${{ steps.cmakeargs.outputs.OPTIONS }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} /jk2mv
+      run: sudo docker exec -w /jk2mv/build/actions buildenv cmake -G "Unix Makefiles" ${{ steps.cmakeargs.outputs.OPTIONS }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} /jk2mv
 
     - name: Build
       shell: bash
-      run: podman exec -w /jk2mv/build/actions buildenv make
+      run: sudo docker exec -w /jk2mv/build/actions buildenv make
 
     - name: Package
       shell: bash
-      run: podman exec -w /jk2mv/build/actions buildenv make package
+      run: sudo docker exec -w /jk2mv/build/actions buildenv make package
 
     #- uses: 'actions/upload-artifact@v2'
     #  with:
