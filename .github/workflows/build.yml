@@ -145,9 +145,9 @@ jobs:
       shell: bash
       run: |
         if [ "${{ matrix.portable }}" == "Portable" ]; then
-          echo '::set-output name=PORTABLE::"-DBuildPortableVersion=ON"'
+          echo '::set-output name=PORTABLE::-DBuildPortableVersion=ON'
         else
-          echo '::set-output name=PORTABLE::"-DBuildPortableVersion=OFF"'
+          echo '::set-output name=PORTABLE::-DBuildPortableVersion=OFF'
         fi
 
     - name: Create Build Environment
@@ -202,9 +202,9 @@ jobs:
       shell: bash
       run: |
         if [ "${{ matrix.portable }}" == "Portable" ]; then
-          echo '::set-output name=PORTABLE::"-DUseInternalLibs=ON -DBuildPortableVersion=ON"'
+          echo '::set-output name=PORTABLE::-DUseInternalLibs=ON -DBuildPortableVersion=ON'
         else
-          echo '::set-output name=PORTABLE::"-DUseInternalLibs=OFF -DBuildPortableVersion=OFF"'
+          echo '::set-output name=PORTABLE::-DUseInternalLibs=OFF -DBuildPortableVersion=OFF'
         fi
 
     - name: Create Build Environment
