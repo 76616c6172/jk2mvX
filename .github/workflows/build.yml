@@ -188,6 +188,10 @@ jobs:
           const fs = require('fs').promises;
           const repoowner = context.repo.owner;
           const reponame = context.repo.repo;
+          console.log( '${{github.workspace}}' )
+          console.log( '${{github.workspace}}/build/actions/out/' )
+          console.log( '${{ github.workspace }}' )
+          console.log( '${{ github.workspace }}/build/actions/out/' )
           for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
           {
             if ( filename.endsWith('.zip') )
