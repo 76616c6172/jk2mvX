@@ -45,29 +45,24 @@ jobs:
         name: Windows Installer, ${{ matrix.build_type }}, ${{ matrix.arch }}
         path: ${{github.workspace}}/build/actions/out/*.exe
 
-    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
-    - name: Upload Release
+    # We need exactly one filename for actions/upload-release-asset
+    - name: Find Release File
       if: ${{ github.event_name == 'release' }}
-      uses: actions/github-script@v4
+      id: releasefile
+      shell: bash
+      working-directory: ${{github.workspace}}/build/actions/out
+      run: echo "::set-output name=FILENAME::$(ls | grep '\.exe$' | head -n1)"
+
+    - name: Upload Release Asset
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs').promises;
-          for ( let filename of await fs.readdir(String.raw`${{github.workspace}}/build/actions/out/`) )
-          {
-            if ( filename.endsWith('.exe') )
-            {
-              await github.repos.uploadReleaseAsset(
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: ${{ github.event.release.id }},
-                  name: filename,
-                  data: await fs.readFile( String.raw`${{github.workspace}}/build/actions/out/` + filename )
-                }
-              );
-            }
-          }
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ github.workspace }}/${{ steps.releasefile.outputs.FILENAME }}
+        asset_name: ${{ steps.releasefile.outputs.FILENAME }}
+        asset_content_type: application/octet-stream
 
   vs2019:
     name: Build VS 2019 (Portable), ${{ matrix.build_type }}, ${{ matrix.arch }}
@@ -110,29 +105,24 @@ jobs:
         name: Windows Package, ${{ matrix.build_type }}, ${{ matrix.arch }}
         path: ${{github.workspace}}/build/actions/out/*.zip
 
-    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
-    - name: Upload Release
+    # We need exactly one filename for actions/upload-release-asset
+    - name: Find Release File
       if: ${{ github.event_name == 'release' }}
-      uses: actions/github-script@v4
+      id: releasefile
+      shell: bash
+      working-directory: ${{github.workspace}}/build/actions/out
+      run: echo "::set-output name=FILENAME::$(ls | grep '\.zip$' | head -n1)"
+
+    - name: Upload Release Asset
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs').promises;
-          for ( let filename of await fs.readdir(String.raw`${{github.workspace}}/build/actions/out/`) )
-          {
-            if ( filename.endsWith('.zip') )
-            {
-              await github.repos.uploadReleaseAsset(
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: ${{ github.event.release.id }},
-                  name: filename,
-                  data: await fs.readFile( String.raw`${{github.workspace}}/build/actions/out/` + filename )
-                }
-              );
-            }
-          }
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ github.workspace }}/${{ steps.releasefile.outputs.FILENAME }}
+        asset_name: ${{ steps.releasefile.outputs.FILENAME }}
+        asset_content_type: application/octet-stream
 
   vs2017_xp:
     name: Build VS 2017 (Portable - Windows XP), ${{ matrix.build_type }}
@@ -174,29 +164,24 @@ jobs:
         name: Windows Package (Windows XP), ${{ matrix.build_type }}
         path: ${{github.workspace}}/build/actions/out/*.zip
 
-    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
-    - name: Upload Release
+    # We need exactly one filename for actions/upload-release-asset
+    - name: Find Release File
       if: ${{ github.event_name == 'release' }}
-      uses: actions/github-script@v4
+      id: releasefile
+      shell: bash
+      working-directory: ${{github.workspace}}/build/actions/out
+      run: echo "::set-output name=FILENAME::$(ls | grep '\.zip$' | head -n1)"
+
+    - name: Upload Release Asset
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs').promises;
-          for ( let filename of await fs.readdir(String.raw`${{github.workspace}}/build/actions/out/`) )
-          {
-            if ( filename.endsWith('.zip') )
-            {
-              await github.repos.uploadReleaseAsset(
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: ${{ github.event.release.id }},
-                  name: filename,
-                  data: await fs.readFile( String.raw`${{github.workspace}}/build/actions/out/` + filename )
-                }
-              );
-            }
-          }
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ github.workspace }}/${{ steps.releasefile.outputs.FILENAME }}
+        asset_name: ${{ steps.releasefile.outputs.FILENAME }}
+        asset_content_type: application/octet-stream
 
   macos:
     name: Build macOS AppleClang, ${{ matrix.build_type }}, ${{ matrix.portable }}
@@ -257,29 +242,24 @@ jobs:
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.dmg
 
-    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
-    - name: Upload Release
+    # We need exactly one filename for actions/upload-release-asset
+    - name: Find Release File
       if: ${{ github.event_name == 'release' }}
-      uses: actions/github-script@v4
+      id: releasefile
+      shell: bash
+      working-directory: ${{github.workspace}}/build/actions/out
+      run: echo "::set-output name=FILENAME::$(ls | grep '\.tar\.gt$\|\.dmg$' | head -n1)"
+
+    - name: Upload Release Asset
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs').promises;
-          for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
-          {
-            if ( filename.endsWith('.zip') || filename.endsWith('.dmg') )
-            {
-              await github.repos.uploadReleaseAsset(
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: ${{ github.event.release.id }},
-                  name: filename,
-                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/" + filename )
-                }
-              );
-            }
-          }
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ github.workspace }}/${{ steps.releasefile.outputs.FILENAME }}
+        asset_name: ${{ steps.releasefile.outputs.FILENAME }}
+        asset_content_type: application/octet-stream
 
   linux:
     name: Build Linux, ${{ matrix.build_type }}, ${{ matrix.portable }}
@@ -340,26 +320,21 @@ jobs:
           ${{github.workspace}}/build/actions/out/*.deb
           ${{github.workspace}}/build/actions/out/*.rpm
 
-    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
-    - name: Upload Release
+    # We need exactly one filename for actions/upload-release-asset
+    - name: Find Release File
       if: ${{ github.event_name == 'release' }}
-      uses: actions/github-script@v4
+      id: releasefile
+      shell: bash
+      working-directory: ${{github.workspace}}/build/actions/out
+      run: echo "::set-output name=FILENAME::$(ls | grep '\.tar\.gz$\|\.deb$\|\.rpm$' | head -n1)"
+
+    - name: Upload Release Asset
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        script: |
-          const fs = require('fs').promises;
-          for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
-          {
-            if ( filename.endsWith('.tar.gz') || filename.endsWith('.deb') || filename.endsWith('.rpm') )
-            {
-              await github.repos.uploadReleaseAsset(
-                {
-                  owner: context.repo.owner,
-                  repo: context.repo.repo,
-                  release_id: ${{ github.event.release.id }},
-                  name: filename,
-                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/" + filename )
-                }
-              );
-            }
-          }
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ${{ github.workspace }}/${{ steps.releasefile.outputs.FILENAME }}
+        asset_name: ${{ steps.releasefile.outputs.FILENAME }}
+        asset_content_type: application/octet-stream
