@@ -267,7 +267,7 @@ jobs:
           const fs = require('fs').promises;
           for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
           {
-            if ( filename.endsWith('.zip') || filename.endsWith('.dmg') )
+            if ( filename.endsWith('.tar.gz') || filename.endsWith('.dmg') )
             {
               await github.repos.uploadReleaseAsset(
                 {
