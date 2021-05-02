@@ -156,9 +156,14 @@ jobs:
     - uses: 'actions/upload-artifact@v2'
       with:
         name: Linux Binaries, ${{ matrix.options }}
-        path: ${{github.workspace}}/build/actions/out/**/*
+        path: |
+          ${{github.workspace}}/build/actions/out/Release/*
+          ${{github.workspace}}/build/actions/out/Debug/*
 
     - uses: 'actions/upload-artifact@v2'
       with:
         name: Linux Package, ${{ matrix.options }}
-        path: ${{github.workspace}}/build/actions/out/*.tar.gz
+        path: |
+          ${{github.workspace}}/build/actions/out/*.tar.gz
+          ${{github.workspace}}/build/actions/out/*.deb
+          ${{github.workspace}}/build/actions/out/*.rpm
