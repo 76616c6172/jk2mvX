@@ -7,7 +7,7 @@ on:
   pull_request:
     branches: actions
   release:
-    types: created
+    types: [created, published]
 
 jobs:
   vs2019-installer:
