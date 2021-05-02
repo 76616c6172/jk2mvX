@@ -41,7 +41,9 @@ jobs:
     - uses: 'actions/upload-artifact@v2'
       with:
         name: Windows Binaries, ${{ matrix.build_type }}, ${{ matrix.arch }}
-        path: ${{github.workspace}}/build/actions/out/**/*
+        path: |
+          ${{github.workspace}}/build/actions/out/Release/*
+          ${{github.workspace}}/build/actions/out/Debug/*
 
   vs2017_xp:
     name: Build VS 2017, Windows XP
@@ -72,7 +74,9 @@ jobs:
     - uses: 'actions/upload-artifact@v2'
       with:
         name: Windows Binaries, Windows XP
-        path: ${{github.workspace}}/build/actions/out/**/*
+        path: |
+          ${{github.workspace}}/build/actions/out/Release/*
+          ${{github.workspace}}/build/actions/out/Debug/*
 
   macos:
     name: Build macOS AppleClang, ${{ matrix.portable }}
@@ -112,12 +116,16 @@ jobs:
     - uses: 'actions/upload-artifact@v2'
       with:
         name: macOS Binaries, ${{ matrix.portable }}
-        path: ${{github.workspace}}/build/actions/out/**/*
+        path: |
+          ${{github.workspace}}/build/actions/out/Release/*
+          ${{github.workspace}}/build/actions/out/Debug/*
 
     - uses: 'actions/upload-artifact@v2'
       with:
         name: macOS Package, ${{ matrix.portable }}
-        path: ${{github.workspace}}/build/actions/out/*.tar.gz
+        path: |
+          ${{github.workspace}}/build/actions/out/*.tar.gz
+          ${{github.workspace}}/build/actions/out/*.dmg
 
   linux:
     name: Build Linux, ${{ matrix.options }}
