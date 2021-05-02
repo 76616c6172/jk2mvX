@@ -68,7 +68,7 @@ jobs:
     name: Build macOS AppleClang
     runs-on: macos-10.15
     env:
-        DEVELOPER_DIR: /Applications/Xcode_10.3.app/Contents/Developer
+        DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
     strategy:
       matrix:
         portable: [-DBuildPortableVersion=ON, -DBuildPortableVersion=OFF]
