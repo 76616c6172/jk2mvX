@@ -184,7 +184,7 @@ jobs:
           ${{github.workspace}}/build/actions/out/*.dmg
 
   linux:
-    name: Build Linux, ${{ matrix.portable }}
+    name: Build Linux, ${{ matrix.build_type }}, ${{ matrix.portable }}
     runs-on: ubuntu-20.04
     strategy:
       matrix:
