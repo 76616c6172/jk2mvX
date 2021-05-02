@@ -65,7 +65,7 @@ jobs:
                   repo: reponame,
                   release_id: ${{ github.event.release.id }},
                   name: filename,
-                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${filename}" )
                 }
               );
             }
@@ -132,7 +132,7 @@ jobs:
                   repo: reponame,
                   release_id: ${{ github.event.release.id }},
                   name: filename,
-                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${filename}" )
                 }
               );
             }
@@ -198,7 +198,7 @@ jobs:
                   repo: reponame,
                   release_id: ${{ github.event.release.id }},
                   name: filename,
-                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${filename}" )
                 }
               );
             }
@@ -283,7 +283,7 @@ jobs:
                   repo: reponame,
                   release_id: ${{ github.event.release.id }},
                   name: filename,
-                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${filename}" )
                 }
               );
             }
@@ -368,7 +368,7 @@ jobs:
                   repo: reponame,
                   release_id: ${{ github.event.release.id }},
                   name: filename,
-                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${filename}" )
                 }
               );
             }
