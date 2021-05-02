@@ -312,9 +312,9 @@ jobs:
         fi
         [[ "${{ matrix.container_image}}" == i386* ]] && OPTIONS="$OPTIONS -DSystemProcessor=i386"
         echo "::set-output name=OPTIONS::$OPTIONS"
-        BINARTIFACTNAME=$(echo "Linux Binaries (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}" | tr ":" "_")
+        BINARTIFACTNAME=$(echo "Linux Binaries (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}" | tr ":/" "-")
         echo "::set-output name=BINARTIFACTNAME::$BINARTIFACTNAME"
-        PKGARTIFACTNAME=$(echo "Linux Package (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}" | tr ":" "_")
+        PKGARTIFACTNAME=$(echo "Linux Package (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}" | tr ":/" "-")
         echo "::set-output name=PKGARTIFACTNAME::$PKGARTIFACTNAME"
 
     - name: Create Build Environment
