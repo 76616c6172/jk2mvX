@@ -131,4 +131,4 @@ jobs:
     - name: Package
       working-directory: ${{github.workspace}}/build/actions
       shell: bash
-      run: make pakage
+      run: make package
