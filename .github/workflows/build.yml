@@ -18,6 +18,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
@@ -41,6 +43,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Add msbuild to PATH
       uses: microsoft/setup-msbuild@v1.0.2
@@ -67,6 +71,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Create Build Environment
       run: |
@@ -76,7 +82,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build/actions
-      run: cmake -G "Unix Makefiles" -DUseInternalLibs=ON -DBuildPortableVersion=${{ matrix.portable }} ../..
+      run: cmake -G "Unix Makefiles" -DUseInternalLibs=ON -DBuildPortableVersion=${{ matrix.portable }} $GITHUB_WORKSPACE
 
     - name: Build
       working-directory: ${{runner.workspace}}/build/actions
@@ -97,6 +103,8 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+      with:
+        submodules: true
 
     - name: Create Build Environment
       run: |
@@ -107,7 +115,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{runner.workspace}}/build/actions
-      run: cmake ${{ matrix.options }} ../..
+      run: cmake ${{ matrix.options }} $GITHUB_WORKSPACE
 
     - name: Build
       working-directory: ${{runner.workspace}}/build/actions
