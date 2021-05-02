@@ -1,0 +1,23 @@
+name: Build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  create-release:
+    # If a new version tag was pushed create a new release
+    - name: Create Release
+    - runs-on: ubuntu-latest
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: JK2MV ${{ github.ref }}
+        body: |
+          Automated Release: No description available, yet.
+        draft: false
+        prerelease: false

@@ -6,6 +6,8 @@ on:
     branches: actions
   pull_request:
     branches: actions
+  release:
+    types: created
 
 jobs:
   vs2019-installer:
@@ -42,6 +44,30 @@ jobs:
       with:
         name: Windows Installer, ${{ matrix.build_type }}, ${{ matrix.arch }}
         path: ${{github.workspace}}/build/actions/out/*.exe
+
+    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
+    - name: Upload Release
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/github-script@v4
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs').promises;
+          for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
+          {
+            if ( filename.endsWith('.exe') )
+            {
+              await github.repos.uploadReleaseAsset(
+                {
+                  context.repo.owner,
+                  context.repo.repo,
+                  ${{ github.event.release.id }},
+                  name: filename,
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                }
+              );
+            }
+          }
 
   vs2019:
     name: Build VS 2019 (Portable), ${{ matrix.build_type }}, ${{ matrix.arch }}
@@ -84,6 +110,30 @@ jobs:
         name: Windows Package, ${{ matrix.build_type }}, ${{ matrix.arch }}
         path: ${{github.workspace}}/build/actions/out/*.zip
 
+    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
+    - name: Upload Release
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/github-script@v4
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs').promises;
+          for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
+          {
+            if ( filename.endsWith('.zip') )
+            {
+              await github.repos.uploadReleaseAsset(
+                {
+                  context.repo.owner,
+                  context.repo.repo,
+                  ${{ github.event.release.id }},
+                  name: filename,
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                }
+              );
+            }
+          }
+
   vs2017_xp:
     name: Build VS 2017 (Portable - Windows XP), ${{ matrix.build_type }}
     runs-on: windows-2016
@@ -123,6 +173,30 @@ jobs:
       with:
         name: Windows Package (Windows XP), ${{ matrix.build_type }}
         path: ${{github.workspace}}/build/actions/out/*.zip
+
+    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
+    - name: Upload Release
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/github-script@v4
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs').promises;
+          for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
+          {
+            if ( filename.endsWith('.zip') )
+            {
+              await github.repos.uploadReleaseAsset(
+                {
+                  context.repo.owner,
+                  context.repo.repo,
+                  ${{ github.event.release.id }},
+                  name: filename,
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                }
+              );
+            }
+          }
 
   macos:
     name: Build macOS AppleClang, ${{ matrix.build_type }}, ${{ matrix.portable }}
@@ -183,6 +257,30 @@ jobs:
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.dmg
 
+    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
+    - name: Upload Release
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/github-script@v4
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs').promises;
+          for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
+          {
+            if ( filename.endsWith('.zip') || filename.endsWith('.dmg') )
+            {
+              await github.repos.uploadReleaseAsset(
+                {
+                  context.repo.owner,
+                  context.repo.repo,
+                  ${{ github.event.release.id }},
+                  name: filename,
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                }
+              );
+            }
+          }
+
   linux:
     name: Build Linux, ${{ matrix.build_type }}, ${{ matrix.portable }}
     runs-on: ubuntu-20.04
@@ -241,3 +339,27 @@ jobs:
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.deb
           ${{github.workspace}}/build/actions/out/*.rpm
+
+    # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
+    - name: Upload Release
+      if: ${{ github.event_name == 'release' }}
+      uses: actions/github-script@v4
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs').promises;
+          for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
+          {
+            if ( filename.endsWith('.tar.gz') || filename.endsWith('.deb') || filename.endsWith('.rpm') )
+            {
+              await github.repos.uploadReleaseAsset(
+                {
+                  context.repo.owner,
+                  context.repo.repo,
+                  ${{ github.event.release.id }},
+                  name: filename,
+                  data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
+                }
+              );
+            }
+          }
