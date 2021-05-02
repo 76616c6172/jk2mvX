@@ -301,8 +301,8 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    - name: Set CMake parameters
-      id: cmakeargs
+    - name: Determine parameters
+      id: parameters
       shell: bash
       run: |
         if [ "${{ matrix.portable }}" == "Portable" ]; then
@@ -312,6 +312,10 @@ jobs:
         fi
         [[ "${{ matrix.container_image}}" == i386* ]] && OPTIONS="$OPTIONS -DSystemProcessor=i386"
         echo "::set-output name=OPTIONS::$OPTIONS"
+        BINARTIFACTNAME=$(echo "Linux Binaries (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}" | tr ":" "_")
+        echo "::set-output name=BINARTIFACTNAME::$BINARTIFACTNAME"
+        PKGARTIFACTNAME=$(echo "Linux Package (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}" | tr ":" "_")
+        echo "::set-output name=PKGARTIFACTNAME::$PKGARTIFACTNAME"
 
     - name: Create Build Environment
       run: |
@@ -323,7 +327,7 @@ jobs:
 
     - name: Configure CMake
       shell: bash
-      run: podman exec -w /jk2mv/build/actions buildenv cmake -G "Unix Makefiles" ${{ steps.cmakeargs.outputs.OPTIONS }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} /jk2mv
+      run: podman exec -w /jk2mv/build/actions buildenv cmake -G "Unix Makefiles" ${{ steps.parameters.outputs.OPTIONS }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} /jk2mv
 
     - name: Build
       shell: bash
@@ -335,13 +339,13 @@ jobs:
 
     #- uses: 'actions/upload-artifact@v2'
     #  with:
-    #    name: Linux Binaries (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}
+    #    name: ${{ steps.parameters.outputs.BINARTIFACTNAME }}
     #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
       if: ${{ matrix.build_type == 'Release' }}
       with:
-        name: Linux Package (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}
+        name: ${{ steps.parameters.outputs.PKGARTIFACTNAME }}
         path: |
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.deb
