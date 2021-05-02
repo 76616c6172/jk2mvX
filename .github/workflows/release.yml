@@ -8,8 +8,10 @@ on:
 jobs:
   create-release:
     # If a new version tag was pushed create a new release
-    - name: Create Release
-    - runs-on: ubuntu-latest
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      name: Create Release
       id: create_release
       uses: actions/create-release@v1
       env:
