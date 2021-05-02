@@ -311,7 +311,7 @@ jobs:
           OPTIONS="-DUseInternalLibs=OFF -DBuildPortableVersion=OFF"
         fi
         [[ "${{ matrix.container_image}}" == i386* ]] && OPTIONS="$OPTIONS -DSystemProcessor=i386"
-        echo "::set-output name=OPTIONS::$OPTION"
+        echo "::set-output name=OPTIONS::$OPTIONS"
 
     - name: Create Build Environment
       run: |
