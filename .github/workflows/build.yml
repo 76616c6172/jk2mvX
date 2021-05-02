@@ -248,7 +248,7 @@ jobs:
       id: releasefile
       shell: bash
       working-directory: ${{github.workspace}}/build/actions/out
-      run: echo "::set-output name=FILENAME::$(ls | grep '\.tar\.gz$\|\.dmg$' | head -n1)"
+      run: echo "::set-output name=FILENAME::$(ls | grep '\.tar\.gt$\|\.dmg$' | head -n1)"
 
     - name: Upload Release Asset
       if: ${{ github.event_name == 'release' }}
