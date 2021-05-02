@@ -43,6 +43,11 @@ jobs:
         name: Windows Binaries, ${{ matrix.build_type }}, ${{ matrix.arch }}
         path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
+    - uses: 'actions/upload-artifact@v2'
+      with:
+        name: Windows Package, ${{ matrix.build_type }}, ${{ matrix.arch }}
+        path: ${{github.workspace}}/build/actions/out/*.zip
+
   vs2017_xp:
     name: Build VS 2017 (Windows XP), ${{ matrix.build_type }}
     runs-on: windows-2016
@@ -76,6 +81,11 @@ jobs:
       with:
         name: Windows Binaries (Windows XP), ${{ matrix.build_type }}
         path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
+
+    - uses: 'actions/upload-artifact@v2'
+      with:
+        name: Windows Package (Windows XP), ${{ matrix.build_type }}
+        path: ${{github.workspace}}/build/actions/out/*.zip
 
   macos:
     name: Build macOS AppleClang, ${{ matrix.portable }}
@@ -115,14 +125,14 @@ jobs:
 
     - uses: 'actions/upload-artifact@v2'
       with:
-        name: macOS Binaries, ${{ matrix.portable }}
+        name: macOS Binaries, ${{ matrix.build_type }}, ${{ matrix.portable }}
         path: |
           ${{github.workspace}}/build/actions/out/Release/*
           ${{github.workspace}}/build/actions/out/Debug/*
 
     - uses: 'actions/upload-artifact@v2'
       with:
-        name: macOS Package, ${{ matrix.portable }}
+        name: macOS Package, ${{ matrix.build_type }}, ${{ matrix.portable }}
         path: |
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.dmg
@@ -164,14 +174,14 @@ jobs:
 
     - uses: 'actions/upload-artifact@v2'
       with:
-        name: Linux Binaries, ${{ matrix.options }}
+        name: Linux Binaries, ${{ matrix.build_type }}, ${{ matrix.options }}
         path: |
           ${{github.workspace}}/build/actions/out/Release/*
           ${{github.workspace}}/build/actions/out/Debug/*
 
     - uses: 'actions/upload-artifact@v2'
       with:
-        name: Linux Package, ${{ matrix.options }}
+        name: Linux Package, ${{ matrix.build_type }}, ${{ matrix.options }}
         path: |
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.deb
