@@ -40,9 +40,14 @@ jobs:
       shell: cmd
       run: msbuild /m /p:Configuration=${{ matrix.build_type }} PACKAGE.vcxproj
 
+    #- uses: 'actions/upload-artifact@v2'
+    #  with:
+    #    name: Windows Binaries (Installer), ${{ matrix.build_type }}, ${{ matrix.arch }}
+    #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
+
     - uses: 'actions/upload-artifact@v2'
       with:
-        name: Windows Installer, ${{ matrix.build_type }}, ${{ matrix.arch }}
+        name: Windows Package (Installer), ${{ matrix.build_type }}, ${{ matrix.arch }}
         path: ${{github.workspace}}/build/actions/out/*.exe
 
     # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
@@ -101,13 +106,13 @@ jobs:
 
     #- uses: 'actions/upload-artifact@v2'
     #  with:
-    #    name: Windows Binaries, ${{ matrix.build_type }}, ${{ matrix.arch }}
+    #    name: Windows Binaries (Portable), ${{ matrix.build_type }}, ${{ matrix.arch }}
     #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
       if: ${{ matrix.build_type == 'RelWithDebInfo' }}
       with:
-        name: Windows Package, ${{ matrix.build_type }}, ${{ matrix.arch }}
+        name: Windows Package (Portable), ${{ matrix.build_type }}, ${{ matrix.arch }}
         path: ${{github.workspace}}/build/actions/out/*.zip
 
     # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
@@ -135,7 +140,7 @@ jobs:
           }
 
   vs2017_xp:
-    name: Build VS 2017 (Portable - Windows XP), ${{ matrix.build_type }}
+    name: Build VS 2017 (Portable - WinXP), ${{ matrix.build_type }}
     runs-on: windows-2016
     strategy:
       matrix:
@@ -165,13 +170,13 @@ jobs:
 
     #- uses: 'actions/upload-artifact@v2'
     #  with:
-    #    name: Windows Binaries (Windows XP), ${{ matrix.build_type }}
+    #    name: Windows Binaries (Portable - WinXP), ${{ matrix.build_type }}
     #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
       if: ${{ matrix.build_type == 'RelWithDebInfo' }}
       with:
-        name: Windows Package (Windows XP), ${{ matrix.build_type }}
+        name: Windows Package (Portable - WinXP), ${{ matrix.build_type }}
         path: ${{github.workspace}}/build/actions/out/*.zip
 
     # As actions/upload-release-asset seems to demand exact filenames and content types we use a script instead
@@ -199,7 +204,7 @@ jobs:
           }
 
   macos:
-    name: Build macOS AppleClang, ${{ matrix.build_type }}, ${{ matrix.portable }}
+    name: Build macOS (${{ matrix.portable }}), ${{ matrix.build_type }}
     runs-on: macos-10.15
     env:
         DEVELOPER_DIR: /Applications/Xcode_11.7.app/Contents/Developer
@@ -246,13 +251,13 @@ jobs:
 
     #- uses: 'actions/upload-artifact@v2'
     #  with:
-    #    name: macOS Binaries, ${{ matrix.build_type }}, ${{ matrix.portable }}
+    #    name: macOS Binaries (${{ matrix.portable }}), ${{ matrix.build_type }}
     #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
       if: ${{ matrix.build_type == 'Release' }}
       with:
-        name: macOS Package, ${{ matrix.build_type }}, ${{ matrix.portable }}
+        name: macOS Package (${{ matrix.portable }}), ${{ matrix.build_type }}
         path: |
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.dmg
@@ -282,10 +287,11 @@ jobs:
           }
 
   linux:
-    name: Build Linux, ${{ matrix.build_type }}, ${{ matrix.portable }}
+    name: Build Linux (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}
     runs-on: ubuntu-20.04
     strategy:
       matrix:
+        container_image: [ubuntu:16.04, i386/ubuntu:16.04]
         build_type: [Debug, Release]
         portable: [Portable, Non-Portable]
 
@@ -300,41 +306,42 @@ jobs:
       shell: bash
       run: |
         if [ "${{ matrix.portable }}" == "Portable" ]; then
-          echo '::set-output name=PORTABLE::-DUseInternalLibs=ON -DBuildPortableVersion=ON'
+          OPTIONS="-DUseInternalLibs=ON -DBuildPortableVersion=ON"
         else
-          echo '::set-output name=PORTABLE::-DUseInternalLibs=OFF -DBuildPortableVersion=OFF'
+          OPTIONS="-DUseInternalLibs=OFF -DBuildPortableVersion=OFF"
         fi
+        [[ "${{ matrix.container_image}}" == i386* ]] && OPTIONS="$OPTIONS -DSystemProcessor=i386"
+        echo "::set-output name=OPTIONS::$OPTION"
 
     - name: Create Build Environment
       run: |
-        sudo apt-get update
-        sudo apt-get install git zip wget libfuse2 build-essential libsdl2-dev libgl1-mesa-dev libopenal-dev libjpeg-dev libpng-dev libminizip-dev
+        podman pull docker.io/${{ matrix.container_image }}
+        podman run --name buildenv -v ${{ github.workspace }}:/jk2mv -td docker.io/${{ github.container_image }} /bin/bash
+        podman exec buildenv apt-get update
+        podman exec buildenv apt-get install -y git zip wget libfuse2 build-essential libsdl2-dev libgl1-mesa-dev libopenal-dev libjpeg-dev libpng-dev libminizip-dev cmake
         mkdir -p ${{github.workspace}}/build/actions
 
     - name: Configure CMake
       shell: bash
-      working-directory: ${{github.workspace}}/build/actions
-      run: cmake ${{ steps.cmakeargs.outputs.PORTABLE }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $GITHUB_WORKSPACE
+      run: podman exec -w /jk2mv/build/actions buildenv cmake -G "Unix Makefiles" ${{ steps.cmakeargs.outputs.OPTIONS }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} /jk2mv
 
     - name: Build
-      working-directory: ${{github.workspace}}/build/actions
       shell: bash
-      run: make
+      run: podman exec -w /jk2mv/build/actions buildenv make
 
     - name: Package
-      working-directory: ${{github.workspace}}/build/actions
       shell: bash
-      run: make package
+      run: podman exec -w /jk2mv/build/actions buildenv make package
 
     #- uses: 'actions/upload-artifact@v2'
     #  with:
-    #    name: Linux Binaries, ${{ matrix.build_type }}, ${{ matrix.portable }}
+    #    name: Linux Binaries (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}
     #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
       if: ${{ matrix.build_type == 'Release' }}
       with:
-        name: Linux Package, ${{ matrix.build_type }}, ${{ matrix.portable }}
+        name: Linux Package (${{ matrix.portable }} - ${{ matrix.container_image }}), ${{ matrix.build_type }}
         path: |
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.deb
