@@ -65,9 +65,11 @@ jobs:
   macos:
     name: Build macOS AppleClang
     runs-on: macos-10.15
+    env:
+        DEVELOPER_DIR: /Applications/Xcode_10.3.app/Contents/Developer
     strategy:
       matrix:
-        portable: [ON, OFF]
+        portable: [-DBuildPortableVersion=ON, -DBuildPortableVersion=OFF]
 
     steps:
     - uses: actions/checkout@v2
@@ -82,7 +84,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build/actions
-      run: cmake -G "Unix Makefiles" -DUseInternalLibs=ON -DBuildPortableVersion=${{ matrix.portable }} $GITHUB_WORKSPACE
+      run: cmake -G "Unix Makefiles" -DUseInternalLibs=ON ${{ matrix.portable }} $GITHUB_WORKSPACE
 
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
