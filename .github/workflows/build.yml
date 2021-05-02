@@ -25,15 +25,15 @@ jobs:
       uses: microsoft/setup-msbuild@v1.0.2
 
     - name: Create Build Environment
-      run: cmake -E make_directory ${{runner.workspace}}/build/actions
+      run: cmake -E make_directory ${{github.workspace}}/build/actions
 
     - name: Configure CMake
       shell: bash
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       run: cmake $GITHUB_WORKSPACE -A ${{ matrix.arch }}
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       shell: bash
       run: cmake --build . --config ${{ matrix.build_type }}
 
@@ -50,15 +50,15 @@ jobs:
       uses: microsoft/setup-msbuild@v1.0.2
 
     - name: Create Build Environment
-      run: cmake -E make_directory ${{runner.workspace}}/build/actions
+      run: cmake -E make_directory ${{github.workspace}}/build/actions
 
     - name: Configure CMake
       shell: bash
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       run: cmake $GITHUB_WORKSPACE -A Win32 -T v141_xp
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       shell: bash
       run: cmake --build . --config RelWithDebInfo
 
@@ -77,20 +77,20 @@ jobs:
     - name: Create Build Environment
       run: |
         brew install sdl2
-        mkdir -p ${{runner.workspace}}/build/actions
+        mkdir -p ${{github.workspace}}/build/actions
 
     - name: Configure CMake
       shell: bash
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       run: cmake -G "Unix Makefiles" -DUseInternalLibs=ON -DBuildPortableVersion=${{ matrix.portable }} $GITHUB_WORKSPACE
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       shell: bash
       run: make
 
     - name: Package
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       shell: bash
       run: make package
 
@@ -110,19 +110,19 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install git zip wget libfuse2 build-essential libsdl2-dev libgl1-mesa-dev libopenal-dev libjpeg-dev libpng-dev libminizip-dev
-        mkdir -p ${{runner.workspace}}/build/actions
+        mkdir -p ${{github.workspace}}/build/actions
 
     - name: Configure CMake
       shell: bash
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       run: cmake ${{ matrix.options }} $GITHUB_WORKSPACE
 
     - name: Build
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       shell: bash
       run: build
 
     - name: Package
-      working-directory: ${{runner.workspace}}/build/actions
+      working-directory: ${{github.workspace}}/build/actions
       shell: bash
       run: build
