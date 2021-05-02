@@ -191,7 +191,7 @@ jobs:
                   owner: context.repo.owner,
                   repo: context.repo.repo,
                   release_id: ${{ github.event.release.id }},
-                  name: filename,
+                  name: filename.split('.').slice(0, -1).join('.') + "-winxp.zip",
                   data: await fs.readFile( String.raw`${{github.workspace}}/build/actions/out/` + filename )
                 }
               );
