@@ -316,7 +316,7 @@ jobs:
     - name: Create Build Environment
       working-directory: ${{github.workspace}}
       run: |
-        eacho "${PWD}/build/actions:/jk2mv"
+        echo "${PWD}/build/actions:/jk2mv"
         sudo docker pull docker.io/${{ matrix.container_image }}
         sudo docker run --name buildenv -v ${PWD}/build/actions:/jk2mv -td docker.io/${{ github.container_image }} /bin/bash
         sudo docker exec buildenv apt-get update
