@@ -7,7 +7,7 @@ on:
   pull_request:
     branches: actions
   release:
-    types: [created, published]
+    types: [created]
 
 jobs:
   vs2019-installer:
@@ -53,17 +53,17 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs').promises;
-          const owner = context.repo.owner;
-          const repo = context.repo.repo;
+          const repoowner = context.repo.owner;
+          const reponame = context.repo.repo;
           for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
           {
             if ( filename.endsWith('.exe') )
             {
               await github.repos.uploadReleaseAsset(
                 {
-                  owner,
-                  repo,
-                  ${{ github.event.release.id }},
+                  owner: repoowner,
+                  repo: reponame,
+                  release_id: ${{ github.event.release.id }},
                   name: filename,
                   data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
                 }
@@ -120,17 +120,17 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs').promises;
-          const owner = context.repo.owner;
-          const repo = context.repo.repo;
+          const repoowner = context.repo.owner;
+          const reponame = context.repo.repo;
           for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
           {
             if ( filename.endsWith('.zip') )
             {
               await github.repos.uploadReleaseAsset(
                 {
-                  owner,
-                  repo,
-                  ${{ github.event.release.id }},
+                  owner: repoowner,
+                  repo: reponame,
+                  release_id: ${{ github.event.release.id }},
                   name: filename,
                   data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
                 }
@@ -186,17 +186,17 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs').promises;
-          const owner = context.repo.owner;
-          const repo = context.repo.repo;
+          const repoowner = context.repo.owner;
+          const reponame = context.repo.repo;
           for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
           {
             if ( filename.endsWith('.zip') )
             {
               await github.repos.uploadReleaseAsset(
                 {
-                  owner,
-                  repo,
-                  ${{ github.event.release.id }},
+                  owner: repoowner,
+                  repo: reponame,
+                  release_id: ${{ github.event.release.id }},
                   name: filename,
                   data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
                 }
@@ -271,17 +271,17 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs').promises;
-          const owner = context.repo.owner;
-          const repo = context.repo.repo;
+          const repoowner = context.repo.owner;
+          const reponame = context.repo.repo;
           for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
           {
             if ( filename.endsWith('.zip') || filename.endsWith('.dmg') )
             {
               await github.repos.uploadReleaseAsset(
                 {
-                  owner,
-                  repo,
-                  ${{ github.event.release.id }},
+                  owner: repoowner,
+                  repo: reponame,
+                  release_id: ${{ github.event.release.id }},
                   name: filename,
                   data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
                 }
@@ -356,17 +356,17 @@ jobs:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
           const fs = require('fs').promises;
-          const owner = context.repo.owner;
-          const repo = context.repo.repo;
+          const repoowner = context.repo.owner;
+          const reponame = context.repo.repo;
           for ( let filename of await fs.readdir('${{github.workspace}}/build/actions/out/') )
           {
             if ( filename.endsWith('.tar.gz') || filename.endsWith('.deb') || filename.endsWith('.rpm') )
             {
               await github.repos.uploadReleaseAsset(
                 {
-                  owner,
-                  repo,
-                  ${{ github.event.release.id }},
+                  owner: repoowner,
+                  repo: reponame,
+                  release_id: ${{ github.event.release.id }},
                   name: filename,
                   data: await fs.readFile( "${{github.workspace}}/build/actions/out/${file}" )
                 }
