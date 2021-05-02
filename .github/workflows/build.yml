@@ -8,8 +8,43 @@ on:
     branches: actions
 
 jobs:
+  vs2019-installer:
+    name: Build VS 2019 (Installer), ${{ matrix.build_type }}, ${{ matrix.arch }}
+    runs-on: windows-2019
+    strategy:
+      matrix:
+        build_type: [RelWithDebInfo]
+        arch: [Win32]
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        submodules: true
+        fetch-depth: 0
+
+    - name: Add msbuild to PATH
+      uses: microsoft/setup-msbuild@v1.0.2
+
+    - name: Create Build Environment
+      run: cmake -E make_directory ${{github.workspace}}/build/actions
+
+    - name: Configure CMake
+      shell: bash
+      working-directory: ${{github.workspace}}/build/actions
+      run: cmake $GITHUB_WORKSPACE -A ${{ matrix.arch }} -DBuildPortableVersion=OFF
+
+    - name: Build
+      working-directory: ${{github.workspace}}/build/actions
+      shell: cmd
+      run: msbuild /m /p:Configuration=${{ matrix.build_type }} PACKAGE.vcxproj
+
+    - uses: 'actions/upload-artifact@v2'
+      with:
+        name: Windows Installer, ${{ matrix.build_type }}, ${{ matrix.arch }}
+        path: ${{github.workspace}}/build/actions/out/*.exe
+
   vs2019:
-    name: Build VS 2019, ${{ matrix.build_type }}, ${{ matrix.arch }}
+    name: Build VS 2019 (Portable), ${{ matrix.build_type }}, ${{ matrix.arch }}
     runs-on: windows-2019
     strategy:
       matrix:
@@ -31,7 +66,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build/actions
-      run: cmake $GITHUB_WORKSPACE -A ${{ matrix.arch }}
+      run: cmake $GITHUB_WORKSPACE -A ${{ matrix.arch }} -DBuildPortableVersion=ON
 
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
@@ -49,7 +84,7 @@ jobs:
         path: ${{github.workspace}}/build/actions/out/*.zip
 
   vs2017_xp:
-    name: Build VS 2017 (Windows XP), ${{ matrix.build_type }}
+    name: Build VS 2017 (Portable - Windows XP), ${{ matrix.build_type }}
     runs-on: windows-2016
     strategy:
       matrix:
@@ -70,7 +105,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build/actions
-      run: cmake $GITHUB_WORKSPACE -A Win32 -T v141_xp
+      run: cmake $GITHUB_WORKSPACE -A Win32 -T v141_xp -DBuildPortableVersion=ON
 
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
