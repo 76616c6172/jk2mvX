@@ -35,7 +35,7 @@ jobs:
 
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
-      shell: bash
+      shell: cmd
       run: msbuild /m /p:${{ matrix.build_type }} PACKAGE.vcxproj
 
     - uses: 'actions/upload-artifact@v2'
@@ -69,7 +69,7 @@ jobs:
 
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
-      shell: bash
+      shell: cmd
       run: msbuild /m /p:${{ matrix.build_type }} PACKAGE.vcxproj
 
     - uses: 'actions/upload-artifact@v2'
