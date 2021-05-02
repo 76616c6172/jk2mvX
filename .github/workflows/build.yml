@@ -36,18 +36,19 @@ jobs:
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
       shell: bash
-      run: cmake --build . --config ${{ matrix.build_type }}
+      run: msbuild /m /p:${{ matrix.build_type }} PACKAGE.vcxproj
 
     - uses: 'actions/upload-artifact@v2'
       with:
         name: Windows Binaries, ${{ matrix.build_type }}, ${{ matrix.arch }}
-        path: |
-          ${{github.workspace}}/build/actions/out/Release/*
-          ${{github.workspace}}/build/actions/out/Debug/*
+        path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
   vs2017_xp:
-    name: Build VS 2017, Windows XP
+    name: Build VS 2017 (Windows XP), ${{ matrix.build_type }}
     runs-on: windows-2016
+    strategy:
+      matrix:
+        build_type: [Debug, RelWithDebInfo]
 
     steps:
     - uses: actions/checkout@v2
@@ -69,14 +70,12 @@ jobs:
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
       shell: bash
-      run: cmake --build . --config RelWithDebInfo
+      run: msbuild /m /p:${{ matrix.build_type }} PACKAGE.vcxproj
 
     - uses: 'actions/upload-artifact@v2'
       with:
-        name: Windows Binaries, Windows XP
-        path: |
-          ${{github.workspace}}/build/actions/out/Release/*
-          ${{github.workspace}}/build/actions/out/Debug/*
+        name: Windows Binaries (Windows XP), ${{ matrix.build_type }}
+        path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
   macos:
     name: Build macOS AppleClang, ${{ matrix.portable }}
