@@ -73,12 +73,13 @@ jobs:
       shell: cmd
       run: msbuild /m /p:Configuration=${{ matrix.build_type }} PACKAGE.vcxproj
 
-    - uses: 'actions/upload-artifact@v2'
-      with:
-        name: Windows Binaries, ${{ matrix.build_type }}, ${{ matrix.arch }}
-        path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
+    #- uses: 'actions/upload-artifact@v2'
+    #  with:
+    #    name: Windows Binaries, ${{ matrix.build_type }}, ${{ matrix.arch }}
+    #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
+      if: ${{ matrix.build_type == 'RelWithDebInfo' }}
       with:
         name: Windows Package, ${{ matrix.build_type }}, ${{ matrix.arch }}
         path: ${{github.workspace}}/build/actions/out/*.zip
@@ -112,12 +113,13 @@ jobs:
       shell: cmd
       run: msbuild /m /p:Configuration=${{ matrix.build_type }} PACKAGE.vcxproj
 
-    - uses: 'actions/upload-artifact@v2'
-      with:
-        name: Windows Binaries (Windows XP), ${{ matrix.build_type }}
-        path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
+    #- uses: 'actions/upload-artifact@v2'
+    #  with:
+    #    name: Windows Binaries (Windows XP), ${{ matrix.build_type }}
+    #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
+      if: ${{ matrix.build_type == 'RelWithDebInfo' }}
       with:
         name: Windows Package (Windows XP), ${{ matrix.build_type }}
         path: ${{github.workspace}}/build/actions/out/*.zip
@@ -130,13 +132,23 @@ jobs:
     strategy:
       matrix:
         build_type: [Debug, Release]
-        portable: [-DBuildPortableVersion=ON, -DBuildPortableVersion=OFF]
+        portable: [Portable, Non-Portable]
 
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: true
         fetch-depth: 0
+
+    - name: Set CMake parameters
+      id: cmakeargs
+      shell: bash
+      run: |
+        if [ "${{ matrix.portable }}" == "Portable" ]; then
+          echo '::set-output name=PORTABLE::"-DBuildPortableVersion=ON"'
+        else
+          echo '::set-output name=PORTABLE::"-DBuildPortableVersion=OFF"'
+        fi
 
     - name: Create Build Environment
       run: |
@@ -146,7 +158,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build/actions
-      run: cmake -G "Unix Makefiles" -DUseInternalLibs=ON ${{ matrix.portable }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $GITHUB_WORKSPACE
+      run: cmake -G "Unix Makefiles" -DUseInternalLibs=ON ${{ steps.cmakeargs.outputs.PORTABLE }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $GITHUB_WORKSPACE
 
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
@@ -158,14 +170,13 @@ jobs:
       shell: bash
       run: make package
 
-    - uses: 'actions/upload-artifact@v2'
-      with:
-        name: macOS Binaries, ${{ matrix.build_type }}, ${{ matrix.portable }}
-        path: |
-          ${{github.workspace}}/build/actions/out/Release/*
-          ${{github.workspace}}/build/actions/out/Debug/*
+    #- uses: 'actions/upload-artifact@v2'
+    #  with:
+    #    name: macOS Binaries, ${{ matrix.build_type }}, ${{ matrix.portable }}
+    #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
+      if: ${{ matrix.build_type == 'Release' }}
       with:
         name: macOS Package, ${{ matrix.build_type }}, ${{ matrix.portable }}
         path: |
@@ -173,18 +184,28 @@ jobs:
           ${{github.workspace}}/build/actions/out/*.dmg
 
   linux:
-    name: Build Linux, ${{ matrix.options }}
+    name: Build Linux, ${{ matrix.portable }}
     runs-on: ubuntu-20.04
     strategy:
       matrix:
         build_type: [Debug, Release]
-        options: [-DUseInternalLibs=ON -DBuildPortableVersion=ON, -DUseInternalLibs=OFF -DBuildPortableVersion=OFF]
+        portable: [Portable, Non-Portable]
 
     steps:
     - uses: actions/checkout@v2
       with:
         submodules: true
         fetch-depth: 0
+
+    - name: Set CMake parameters
+      id: cmakeargs
+      shell: bash
+      run: |
+        if [ "${{ matrix.portable }}" == "Portable" ]; then
+          echo '::set-output name=PORTABLE::"-DUseInternalLibs=ON -DBuildPortableVersion=ON"'
+        else
+          echo '::set-output name=PORTABLE::"-DUseInternalLibs=OFF -DBuildPortableVersion=OFF"'
+        fi
 
     - name: Create Build Environment
       run: |
@@ -195,7 +216,7 @@ jobs:
     - name: Configure CMake
       shell: bash
       working-directory: ${{github.workspace}}/build/actions
-      run: cmake ${{ matrix.options }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $GITHUB_WORKSPACE
+      run: cmake ${{ steps.cmakeargs.outputs.PORTABLE }} -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} $GITHUB_WORKSPACE
 
     - name: Build
       working-directory: ${{github.workspace}}/build/actions
@@ -207,16 +228,15 @@ jobs:
       shell: bash
       run: make package
 
-    - uses: 'actions/upload-artifact@v2'
-      with:
-        name: Linux Binaries, ${{ matrix.build_type }}, ${{ matrix.options }}
-        path: |
-          ${{github.workspace}}/build/actions/out/Release/*
-          ${{github.workspace}}/build/actions/out/Debug/*
+    #- uses: 'actions/upload-artifact@v2'
+    #  with:
+    #    name: Linux Binaries, ${{ matrix.build_type }}, ${{ matrix.portable }}
+    #    path: ${{github.workspace}}/build/actions/out/${{ matrix.build_type }}/*
 
     - uses: 'actions/upload-artifact@v2'
+      if: ${{ matrix.build_type == 'Release' }}
       with:
-        name: Linux Package, ${{ matrix.build_type }}, ${{ matrix.options }}
+        name: Linux Package, ${{ matrix.build_type }}, ${{ matrix.portable }}
         path: |
           ${{github.workspace}}/build/actions/out/*.tar.gz
           ${{github.workspace}}/build/actions/out/*.deb
