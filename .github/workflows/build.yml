@@ -318,7 +318,7 @@ jobs:
       run: |
         echo "${PWD}/build/actions:/jk2mv"
         sudo docker pull docker.io/${{ matrix.container_image }}
-        sudo docker run --name buildenv -v ${PWD}/build/actions:/jk2mv -td docker.io/${{ github.container_image }} /bin/bash
+        sudo docker run --name buildenv -v ${PWD}/build/actions:/jk2mv -td ${{ github.container_image }} /bin/bash
         sudo docker exec buildenv apt-get update
         sudo docker exec buildenv apt-get install -y git zip wget libfuse2 build-essential libsdl2-dev libgl1-mesa-dev libopenal-dev libjpeg-dev libpng-dev libminizip-dev cmake rpm
         mkdir -p ${{github.workspace}}/build/actions
