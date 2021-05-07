@@ -576,8 +576,12 @@ Just adds default parameters that cgame doesn't need to know about
 void CL_CM_LoadMap( const char *mapname ) {
 	int		checksum;
 
-	// The client is only willing to load more than MAX_SUBMODELS if the cgame module explicitly told us to bypass the limit.
-	CM_LoadMap( mapname, qtrue, &checksum, cls.submodelBypass );
+	CM_LoadMap( mapname, qtrue, &checksum );
+
+	// If the cgame module didn't announce it can handle it we want to abort now
+	if ( CM_NumInlineModels() > MAX_SUBMODELS && !cls.submodelBypass ) {
+		Com_Error( ERR_DROP, "MAX_SUBMODELS exceeded" );
+	}
 }
 
 /*

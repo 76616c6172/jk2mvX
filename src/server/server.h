@@ -75,6 +75,7 @@ typedef struct {
 	int				resetServerTime;	// Reset sv.time on map change.
 										// 0 = cvar, 1 = always, 2 = never
 	qboolean		vmPlayerSnapshots;
+	qboolean		submodelBypass;
 } server_t;
 
 typedef struct {
@@ -263,7 +264,6 @@ extern	cvar_t	*mv_apiConnectionless;
 extern	cvar_t	*sv_pingFix;
 extern	cvar_t	*sv_autoWhitelist;
 extern	cvar_t	*sv_dynamicSnapshots;
-extern	cvar_t	*sv_submodelWorkaround;
 
 // toggleable fixes
 extern	cvar_t	*mv_fixnamecrash;
@@ -375,6 +375,7 @@ qboolean	SV_inPVS (const vec3_t p1, const vec3_t p2);
 
 qboolean SV_MVAPI_ControlFixes(int fixes);
 qboolean SV_MVAPI_EnablePlayerSnapshots(qboolean enable);
+qboolean SV_MVAPI_EnableSubmodelBypass(qboolean enable);
 
 //
 // sv_bot.c

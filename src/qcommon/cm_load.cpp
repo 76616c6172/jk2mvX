@@ -99,7 +99,7 @@ void CMod_LoadShaders( lump_t *l )
 CMod_LoadSubmodels
 =================
 */
-void CMod_LoadSubmodels( lump_t *l, qboolean noSubmodelLimit ) {
+void CMod_LoadSubmodels( lump_t *l ) {
 	dmodel_t	*in;
 	cmodel_t	*out;
 	int			i, j, count;
@@ -115,12 +115,8 @@ void CMod_LoadSubmodels( lump_t *l, qboolean noSubmodelLimit ) {
 	cm.cmodels = (struct cmodel_s *)Hunk_Alloc( count * sizeof( *cm.cmodels ), h_high );
 	cm.numSubModels = count;
 
-	cm.boxModelHandle = count + 1;
-	cm.capsuleModelHandle = count + 2;
-
-	if ( count > MAX_SUBMODELS && !noSubmodelLimit ) {
-		Com_Error( ERR_DROP, "MAX_SUBMODELS exceeded" );
-	}
+	cm.capsuleModelHandle = MAX(254, count); // At least 254 (CAPSULE_MODEL_HANDLE) in case some legacy cgame module violates the api
+	cm.boxModelHandle = MAX(255, count + 1); // At least 255 (BOX_MODEL_HANDLE) in case some legacy cgame module violates the api
 
 	for ( i=0 ; i<count ; i++, in++, out++)
 	{
@@ -607,11 +603,10 @@ qboolean CM_DeleteCachedMap(qboolean bGuaranteedOkToDelete)
 
 
 
-static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *checksum, qboolean noSubmodelLimit ) {
+static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *checksum ) {
 	int				*buf;
 	dheader_t		header;
 	static unsigned	last_checksum;
-	static qboolean last_noSubmodelLimit;
 
 	if ( !name || !name[0] ) {
 		Com_Error( ERR_DROP, "CM_LoadMap: NULL name" );
@@ -624,11 +619,10 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 #endif
 	Com_DPrintf( "CM_LoadMap( %s, %i )\n", name, clientload );
 
-	if ( !strcmp( cm.name, name ) && clientload && last_noSubmodelLimit == noSubmodelLimit ) {
+	if ( !strcmp( cm.name, name ) && clientload ) {
 		*checksum = last_checksum;
 		return;
 	}
-	last_noSubmodelLimit = noSubmodelLimit;
 
 	// free old stuff
 	CM_ClearMap();
@@ -705,7 +699,7 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 	CMod_LoadPlanes (&header.lumps[LUMP_PLANES]);
 	CMod_LoadBrushSides (&header.lumps[LUMP_BRUSHSIDES]);
 	CMod_LoadBrushes (&header.lumps[LUMP_BRUSHES]);
-	CMod_LoadSubmodels (&header.lumps[LUMP_MODELS], noSubmodelLimit);
+	CMod_LoadSubmodels (&header.lumps[LUMP_MODELS]);
 	CMod_LoadNodes (&header.lumps[LUMP_NODES]);
 	CMod_LoadEntityString (&header.lumps[LUMP_ENTITIES], name);
 	CMod_LoadVisibility( &header.lumps[LUMP_VISIBILITY] );
@@ -724,11 +718,11 @@ static void CM_LoadMap_Actual( const char *name, qboolean clientload, int *check
 
 // need a wrapper function around this because of multiple returns, need to ensure bool is correct...
 //
-void CM_LoadMap( const char *name, qboolean clientload, int *checksum, qboolean noSubmodelLimit )
+void CM_LoadMap( const char *name, qboolean clientload, int *checksum )
 {
 	gbUsingCachedMapDataRightNow = qtrue;	// !!!!!!!!!!!!!!!!!!
 
-		CM_LoadMap_Actual( name, clientload, checksum, noSubmodelLimit );
+		CM_LoadMap_Actual( name, clientload, checksum );
 
 	gbUsingCachedMapDataRightNow = qfalse;	// !!!!!!!!!!!!!!!!!!
 }

@@ -545,16 +545,6 @@ Server-Side
    cause a lot of commands to be sent to a client in a short interval on a busy
    server.
 
-:Name: g_submodelWorkaround
-:Values: "0", "1", "2", "3"
-:Default: "0"
-:Description:
-   MVSDK cvar. Only fully operational when a compatible mvsdk based game module
-   is active on the server. When set to 2 or 3 the engine is going to ignore the
-   default submodel limit of 256, which makes it possible to load bigger maps,
-   for instance from single player or jka. Only clients with compatible engine
-   and cgame module can play on the server when such maps are active.
-
 ==================
 Undocumented Cvars
 ==================
