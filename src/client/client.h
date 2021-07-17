@@ -231,6 +231,9 @@ typedef struct {
 
 	qboolean	gotInfo;
 	qboolean	gotStatus;
+
+	int			mvNetProtocol;
+	int			mvNetReady;
 } clientConnection_t;
 
 extern	clientConnection_t clc;

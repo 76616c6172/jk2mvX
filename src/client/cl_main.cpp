@@ -342,6 +342,7 @@ void CL_Record_f( void ) {
 	entityState_t	nullstate;
 	char		*s;
 	char		demoName[MAX_OSPATH];	//bufsize was MAX_QPATH, but it should be MAX_OSPATH since this is the assumed buffersize in CL_DemoFilename
+	char		*demoExt;
 
 	if ( Cmd_Argc() > 2 ) {
 		Com_Printf ("record <demoname>\n");
@@ -367,17 +368,23 @@ void CL_Record_f( void ) {
 	}
 	#endif
 
+	if ( clc.mvNetProtocol ) {
+		demoExt = "dm_mv1";
+	} else {
+		demoExt = va( "dm_%d", MV_GetCurrentProtocol() );
+	}
+
 	if ( Cmd_Argc() == 2 ) {
 		s = Cmd_Argv(1);
 		Q_strncpyz( demoName, s, sizeof( demoName ) );
-		Com_sprintf (name, sizeof(name), "demos/%s.dm_%d", demoName, MV_GetCurrentProtocol() );
+		Com_sprintf (name, sizeof(name), "demos/%s.%s", demoName, demoExt );
 	} else {
 		int		number;
 
 		// scan for a free demo name
 		for ( number = 0 ; number <= 9999 ; number++ ) {
 			CL_DemoFilename( number, demoName );
-			Com_sprintf(name, sizeof(name), "demos/%s.dm_%d", demoName, MV_GetCurrentProtocol());
+			Com_sprintf(name, sizeof(name), "demos/%s.%s", demoName, demoExt);
 
 			len = FS_ReadFile( name, NULL );
 			if ( len <= 0 ) {
@@ -414,6 +421,26 @@ void CL_Record_f( void ) {
 	// NOTE, MRE: all server->client messages now acknowledge
 	MSG_WriteLong( &buf, clc.reliableSequence );
 
+	// write custom netproto if required
+	if ( clc.mvNetProtocol ) {
+		// write mvNetProtocol value so we don't need to change the format again when we add more feature
+		int val = LittleLong( MV_GetCurrentGameversion() );
+		FS_Write( &val, 4, clc.demofile );
+
+		val = LittleLong( clc.mvNetProtocol );
+		FS_Write( &val, 4, clc.demofile );
+
+		val = LittleLong( clc.mvNetReady );
+		FS_Write( &val, 4, clc.demofile );
+
+		// write custom sizes to demo
+		if ( clc.mvNetReady & MV_NETPROTO_CUSTOMSIZES ) {
+			//MSG_WriteLong( &buf, clc.reliableSequence );
+			MSG_WriteByte( &buf, svc_mvnet_sizes );
+			MSG_NetSizesToMessage( &buf );
+		}
+	}
+
 	MSG_WriteByte (&buf, svc_gamestate);
 	MSG_WriteLong (&buf, clc.serverCommandSequence );
 
@@ -436,7 +463,7 @@ void CL_Record_f( void ) {
 			continue;
 		}
 		MSG_WriteByte (&buf, svc_baseline);
-		MSG_WriteDeltaEntity (&buf, &nullstate, ent, qtrue );
+		MSG_WriteDeltaEntity (&buf, &nullstate, ent, qtrue, (qboolean)!!(clc.mvNetReady & MV_NETPROTO_CUSTOMSIZES) );
 	}
 
 	MSG_WriteByte( &buf, svc_EOF );
@@ -581,8 +608,8 @@ void CL_PlayDemo_f( void ) {
 	*/
 
 	// open the demo file
-	if ( !Q_stricmp( arg + strlen(arg) - strlen(".dm_15"), ".dm_15" ) || !Q_stricmp( arg + strlen(arg) - strlen(".dm_16"), ".dm_16" ) )
-	{ // Load "dm_15" and "dm_16" demos.
+	if ( !Q_stricmp( arg + strlen(arg) - strlen(".dm_15"), ".dm_15" ) || !Q_stricmp( arg + strlen(arg) - strlen(".dm_16"), ".dm_16" ) || !Q_stricmp( arg + strlen(arg) - strlen(".dm_mv1"), ".dm_mv1" ) )
+	{ // Load "dm_15", "dm_16" and "dm_mv1" demos.
 		Com_sprintf (name, sizeof(name), "demos/%s", arg);
 
 		FS_FOpenFileRead( name, &clc.demofile, qtrue );
@@ -601,7 +628,7 @@ void CL_PlayDemo_f( void ) {
 	}
 	else
 	{
-		// Check for both, "dm_15" and "dm_16".
+		// Check for both, "dm_15", "dm_16" and "dm_mv1".
 		Com_sprintf(name, sizeof(name), "demos/%s.dm_15", arg);
 		FS_FOpenFileRead( name, &clc.demofile, qtrue );
 		if ( !clc.demofile )
@@ -610,15 +637,20 @@ void CL_PlayDemo_f( void ) {
 			FS_FOpenFileRead( name, &clc.demofile, qtrue );
 			if ( !clc.demofile )
 			{
-				if (!Q_stricmp(arg, "(null)"))
+				Com_sprintf(name, sizeof(name), "demos/%s.dm_mv1", arg);
+				FS_FOpenFileRead( name, &clc.demofile, qtrue );
+				if ( !clc.demofile )
 				{
-					Com_Error( ERR_DROP, "%s", SP_GetStringTextString("CON_TEXT_NO_DEMO_SELECTED") );
+					if (!Q_stricmp(arg, "(null)"))
+					{
+						Com_Error( ERR_DROP, "%s", SP_GetStringTextString("CON_TEXT_NO_DEMO_SELECTED") );
+					}
+					else
+					{
+						Com_Error( ERR_DROP, "couldn't open demos/%s.dm_15, demos/%s.dm_16 or demos/%s.dm_mv1", arg, arg, arg);
+					}
+					return;
 				}
-				else
-				{
-					Com_Error( ERR_DROP, "couldn't open demos/%s.dm_15 or demos/%s.dm_16", arg, arg);
-				}
-				return;
 			}
 		}
 	}
@@ -630,10 +662,28 @@ void CL_PlayDemo_f( void ) {
 	clc.demoplaying = qtrue;
 	com_demoplaying = qtrue;
 
+	MSG_ClearNetSizes();
+	clc.mvNetReady = 0;
+
 	Q_strncpyz( cls.servername, arg, sizeof( cls.servername ) );
 
 	// Set the protocol according to the the demo-file.
-	if ( !Q_stricmp( name + strlen(name) - strlen(".dm_15"), ".dm_15" ) ) {
+	if ( !Q_stricmp( name + strlen(name) - strlen(".dm_mv1"), ".dm_mv1" ) ) {
+		int val, rLen;
+		rLen = FS_Read( &val, 4, clc.demofile );
+		if ( rLen != 4 ) Com_Error( ERR_FATAL, "CL_PlayDemo_f: invalid .dm_mv1 demo file " );
+		MV_SetCurrentGameversion( (mvversion_t)LittleLong(val) );
+
+		rLen = FS_Read( &val, 4, clc.demofile );
+		if ( rLen != 4 ) Com_Error( ERR_FATAL, "CL_PlayDemo_f: invalid .dm_mv1 demo file " );
+		clc.mvNetProtocol = LittleLong( val );
+
+		rLen = FS_Read( &val, 4, clc.demofile );
+		if ( rLen != 4 ) Com_Error( ERR_FATAL, "CL_PlayDemo_f: invalid .dm_mv1 demo file " );
+		//clc.mvNetReady = LittleLong( val );
+		Com_Printf( "^4>>>>>>>>>>>> ^1%i, %i\n", MV_GetCurrentGameversion(), clc.mvNetProtocol );
+	}
+	else if ( !Q_stricmp( name + strlen(name) - strlen(".dm_15"), ".dm_15" ) ) {
 		MV_SetCurrentGameversion(VERSION_1_02);
 		demoCheckFor103 = true;	//if this demo happens to be a 1.03 demo, check for that in CL_ParseGamestate
 	}
@@ -1217,7 +1267,7 @@ CL_CompleteDemoName
 static void CL_CompleteDemoName( char *args, int argNum )
 {
 	if( argNum == 2 )
-		Field_CompleteFilename( "demos", ".dm_15|.dm_16", qfalse );
+		Field_CompleteFilename( "demos", ".dm_15|.dm_16|.dm_mv1", qfalse );
 }
 
 /*
@@ -1839,6 +1889,7 @@ void CL_CheckForResend( void ) {
 		Info_SetValueForKey( info, "protocol", va("%i", MV_GetCurrentProtocol() ) );
 		Info_SetValueForKey( info, "qport", va("%i", port ) );
 		Info_SetValueForKey( info, "challenge", va("%i", clc.challenge ) );
+		Info_SetValueForKey( info, "mvnetproto", va("%i", MV_NETPROTO_SUPPORTED) );
 		Com_sprintf(data, sizeof(data), "connect \"%s\"", info );
 		NET_OutOfBandData( NS_CLIENT, clc.serverAddress, (unsigned char *)data, (int)strlen(data) );
 
@@ -2241,6 +2292,10 @@ void CL_ConnectionlessPacket( netadr_t from, msg_t *msg ) {
 		Netchan_Setup (NS_CLIENT, &clc.netchan, from, Cvar_VariableValue( "net_qport" ) );
 		cls.state = CA_CONNECTED;
 		clc.lastPacketSentTime = -9999;		// send first packet immediately
+
+		MSG_ClearNetSizes();
+		clc.mvNetProtocol = atoi( Info_ValueForKey(Cmd_Argv(1), "mvnetproto") );
+		clc.mvNetReady = 0;
 		return;
 	}
 

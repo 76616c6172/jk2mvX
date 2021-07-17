@@ -470,6 +470,8 @@ Ghoul2 Insert End
 	// clear the whole hunk because we're (re)loading the server
 	Hunk_Clear();
 
+	MSG_BuildNetSizes();
+
 /*
 Ghoul2 Insert Start
 */

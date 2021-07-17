@@ -195,5 +195,10 @@ void demoAutoInit(void) {
 	} else {
 		Q_strncpyz(demoAuto.mod, "base", sizeof(demoAuto.mod));
 	}
-	Com_sprintf(demoAuto.ext, sizeof(demoAuto.ext), ".dm_%d", MV_GetCurrentProtocol());
+
+	if ( clc.mvNetProtocol ) {
+		Com_sprintf(demoAuto.ext, sizeof(demoAuto.ext), ".dm_mv1");
+	} else {
+		Com_sprintf(demoAuto.ext, sizeof(demoAuto.ext), ".dm_%d", MV_GetCurrentProtocol());
+	}
 }

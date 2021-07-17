@@ -292,6 +292,11 @@ gotnewcl:
 	// save the challenge
 	newcl->challenge = challenge;
 
+	// Save the mvNetProtocol
+	newcl->mvNetProtocol = atoi( Info_ValueForKey( userinfo, "mvnetproto" ) );
+	newcl->mvNetProtocol &= MV_NETPROTO_SUPPORTED;
+	newcl->mvNetReady = 0;
+
 	// save the address
 	Netchan_Setup (NS_SERVER, &newcl->netchan , from, qport);
 
@@ -318,7 +323,10 @@ gotnewcl:
 	SV_UserinfoChanged( newcl );
 
 	// send the connect packet to the client
-	NET_OutOfBandPrint( NS_SERVER, from, "connectResponse" );
+	if ( newcl->mvNetProtocol )
+		NET_OutOfBandPrint( NS_SERVER, from, "connectResponse \\mvnetproto\\%i", newcl->mvNetProtocol );
+	else
+		NET_OutOfBandPrint( NS_SERVER, from, "connectResponse" );
 
 	Com_DPrintf( "Going from CS_FREE to CS_CONNECTED for %s\n", newcl->name );
 
@@ -506,7 +514,7 @@ void SV_SendClientGameState( client_t *client ) {
 			continue;
 		}
 		MSG_WriteByte( &msg, svc_baseline );
-		MSG_WriteDeltaEntity( &msg, &nullstate, base, qtrue );
+		MSG_WriteDeltaEntity( &msg, &nullstate, base, qtrue, (qboolean)!!(client->mvNetReady & MV_NETPROTO_CUSTOMSIZES) );
 	}
 
 	MSG_WriteByte( &msg, svc_EOF );
@@ -1553,6 +1561,29 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 
 	cl->reliableAcknowledge = MSG_ReadLong( msg );
 
+	// Send custom netFields
+	if ( (cl->mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) && !(cl->mvNetReady & MV_NETPROTO_CUSTOMSIZES) ) {
+		c = MSG_ReadByte( msg );
+		if ( c == clc_mvnet_sizes_ack ) {
+			// Client acknowledges our sizes
+			cl->mvNetReady |= MV_NETPROTO_CUSTOMSIZES;
+			Com_DPrintf( "SV_ExecuteClientMessage: %i acknowledged netproto sizes\n", (int)(cl-svs.clients) );
+		} else {
+			// Ignore anything from the client and send sizes
+			msg_t msgSv;
+			byte msgBuffer[MAX_MSGLEN];
+			MSG_Init( &msgSv, msgBuffer, sizeof( msgBuffer ) );
+			MSG_WriteLong( &msgSv, cl->lastClientCommand );
+			MSG_WriteByte( &msgSv, svc_mvnet_sizes );
+			MSG_NetSizesToMessage( &msgSv );
+			MSG_WriteByte( &msgSv, svc_EOF );
+			SV_SendMessageToClient( &msgSv, cl );
+
+			Com_DPrintf( "SV_ExecuteClientMessage: sending netproto sizes to %i\n", (int)(cl-svs.clients) );
+			return;
+		}
+	}
+
 	// NOTE: when the client message is fux0red the acknowledgement numbers
 	// can be out of range, this could cause the server to send thousands of server
 	// commands which the server thinks are not yet acknowledged in SV_UpdateServerCommandsToClient
@@ -1614,6 +1645,8 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 		SV_UserMove( cl, msg, qtrue );
 	} else if ( c == clc_moveNoDelta ) {
 		SV_UserMove( cl, msg, qfalse );
+	} else if ( c == clc_mvnet_sizes_ack ) {
+		Com_Printf( "WARNING: unexpected mvnet_sizes_ack for client %i\n", (int)(cl - svs.clients) );
 	} else if ( c != clc_EOF ) {
 		Com_Printf( "WARNING: bad command byte for client %i\n", (int)(cl - svs.clients) );
 	}

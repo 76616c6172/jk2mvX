@@ -134,15 +134,20 @@ void MSG_WriteDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *
 void MSG_ReadDeltaUsercmdKey( msg_t *msg, int key, usercmd_t *from, usercmd_t *to );
 
 void MSG_WriteDeltaEntity( msg_t *msg, struct entityState_s *from, struct entityState_s *to
-						   , qboolean force );
+						   , qboolean force, qboolean customSizes );
 void MSG_ReadDeltaEntity( msg_t *msg, entityState_t *from, entityState_t *to,
 						 int number );
 
-void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to );
+void MSG_WriteDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to, qboolean customSizes );
 void MSG_ReadDeltaPlayerstate( msg_t *msg, struct playerState_s *from, struct playerState_s *to );
 
 
 void MSG_ReportChangeVectors_f( void );
+
+void MSG_NetSizesToMessage( msg_t *msg );
+void MSG_NetSizesFromMessage( msg_t *msg );
+void MSG_BuildNetSizes( void );
+void MSG_ClearNetSizes( void );
 
 //============================================================================
 
@@ -279,7 +284,10 @@ enum svc_ops_e {
 	svc_snapshot,
 	svc_mapchange,
 
-	svc_EOF
+	svc_EOF,
+
+	// Custom new jk2mv ops
+	svc_mvnet_sizes
 };
 
 
@@ -292,8 +300,16 @@ enum clc_ops_e {
 	clc_move,				// [[usercmd_t]
 	clc_moveNoDelta,		// [[usercmd_t]
 	clc_clientCommand,		// [string] message
-	clc_EOF
+	clc_EOF,
+
+	// Custom new jk2mv ops
+	clc_mvnet_sizes_ack
 };
+
+// MV Netprotocol
+#define MV_NETPROTO_CUSTOMSIZES		(1)							// Custom sizes for netFields
+//#define MV_NETPROTO_CUSTOMFIELDS	(1 << 1)					// NOT IMPLEMENTED: custom fields for game -> cgame
+#define MV_NETPROTO_SUPPORTED		(MV_NETPROTO_CUSTOMSIZES)	// Bitmask to only get supported protocols
 
 /*
 ==============================================================

@@ -18,6 +18,10 @@ static const char * const svc_strings[256] = {
 	"svc_download",
 	"svc_snapshot",
 	"svc_mapchange",
+
+	"svc_EOF",
+
+	"svc_mvnet_sizes",
 };
 
 static void SHOWNET( const msg_t *msg, const char *s) {
@@ -762,6 +766,16 @@ void CL_ParseServerMessage( msg_t *msg ) {
 			break;
 		case svc_download:
 			CL_ParseUDPDownload( msg );
+			break;
+		case svc_mvnet_sizes:
+			if ( !(clc.mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) )
+				Com_Error (ERR_DROP,"CL_ParseServerMessage: unexpected server message (svc_mvnet_sizes)");
+
+			MSG_NetSizesFromMessage( msg );
+			clc.mvNetReady |= MV_NETPROTO_CUSTOMSIZES;
+
+			Com_DPrintf( "CL_ParseServerMessage: received netproto sizes\n" );
+			CL_WritePacket(); // Acknowledge right away
 			break;
 		case svc_mapchange:
 			CL_KillDownload();

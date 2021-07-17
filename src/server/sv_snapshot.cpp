@@ -31,7 +31,7 @@ SV_EmitPacketEntities
 Writes a delta update of an entityState_t list to the message.
 =============
 */
-static void SV_EmitPacketEntities( clientSnapshot_t *from, clientSnapshot_t *to, msg_t *msg ) {
+static void SV_EmitPacketEntities( clientSnapshot_t *from, clientSnapshot_t *to, msg_t *msg, qboolean customSizes ) {
 	entityState_t	*oldent, *newent;
 	int		oldindex, newindex;
 	int		oldnum, newnum;
@@ -67,7 +67,7 @@ static void SV_EmitPacketEntities( clientSnapshot_t *from, clientSnapshot_t *to,
 			// delta update from old position
 			// because the force parm is qfalse, this will not result
 			// in any bytes being emited if the entity has not changed at all
-			MSG_WriteDeltaEntity (msg, oldent, newent, qfalse );
+			MSG_WriteDeltaEntity (msg, oldent, newent, qfalse, customSizes );
 			oldindex++;
 			newindex++;
 			continue;
@@ -75,14 +75,14 @@ static void SV_EmitPacketEntities( clientSnapshot_t *from, clientSnapshot_t *to,
 
 		if ( newnum < oldnum ) {
 			// this is a new entity, send it from the baseline
-			MSG_WriteDeltaEntity (msg, &sv.svEntities[newnum].baseline, newent, qtrue );
+			MSG_WriteDeltaEntity (msg, &sv.svEntities[newnum].baseline, newent, qtrue, customSizes );
 			newindex++;
 			continue;
 		}
 
 		if ( newnum > oldnum ) {
 			// the old entity isn't present in the new message
-			MSG_WriteDeltaEntity (msg, oldent, NULL, qtrue );
+			MSG_WriteDeltaEntity (msg, oldent, NULL, qtrue, customSizes );
 			oldindex++;
 			continue;
 		}
@@ -170,13 +170,13 @@ static void SV_WriteSnapshotToClient( client_t *client, msg_t *msg ) {
 
 	// delta encode the playerstate
 	if ( oldframe ) {
-		MSG_WriteDeltaPlayerstate( msg, &oldframe->ps, &frame->ps );
+		MSG_WriteDeltaPlayerstate( msg, &oldframe->ps, &frame->ps, (qboolean)!!(client->mvNetReady & MV_NETPROTO_CUSTOMSIZES) );
 	} else {
-		MSG_WriteDeltaPlayerstate( msg, NULL, &frame->ps );
+		MSG_WriteDeltaPlayerstate( msg, NULL, &frame->ps, (qboolean)!!(client->mvNetReady & MV_NETPROTO_CUSTOMSIZES) );
 	}
 
 	// delta encode the entities
-	SV_EmitPacketEntities (oldframe, frame, msg);
+	SV_EmitPacketEntities (oldframe, frame, msg, (qboolean)!!(client->mvNetReady & MV_NETPROTO_CUSTOMSIZES));
 
 	// padding for rate debugging
 	if ( sv_padPackets->integer ) {
@@ -668,25 +668,30 @@ void SV_SendClientSnapshot( client_t *client ) {
 		return;
 	}
 
-	// Backup the msg state in case the snapshot would overflow it
-	memcpy( &msgBak, &msg, sizeof(msgBak) );
+	// only send entity and player states if the mvNetProtocol is either not
+	// using custom sizes or the client is ready for them
+	if (    !(client->mvNetProtocol & MV_NETPROTO_CUSTOMSIZES)
+	     || ((client->mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) && (client->mvNetReady & MV_NETPROTO_CUSTOMSIZES)) ) {
+		// Backup the msg state in case the snapshot would overflow it
+		memcpy( &msgBak, &msg, sizeof(msgBak) );
 
-	// send over all the relevant entityState_t
-	// and the playerState_t
-	SV_WriteSnapshotToClient( client, &msg );
+		// send over all the relevant entityState_t
+		// and the playerState_t
+		SV_WriteSnapshotToClient( client, &msg );
 
-	if ( sv_dynamicSnapshots->integer && msg.overflowed && !msgBak.overflowed ) {
-		// The entity states were too much and the message overflowed. So send
-		// the old state of the message from before we tried to append the
-		// entity states. As the net code doesn't send the msg_buf content after
-		// the current size of the message we don't have to clear anything and
-		// we can just use the old msg values (which point to the updated buffer).
-		SV_SendMessageToClient( &msgBak, client );
-		return;
+		if ( sv_dynamicSnapshots->integer && msg.overflowed && !msgBak.overflowed ) {
+			// The entity states were too much and the message overflowed. So send
+			// the old state of the message from before we tried to append the
+			// entity states. As the net code doesn't send the msg_buf content after
+			// the current size of the message we don't have to clear anything and
+			// we can just use the old msg values (which point to the updated buffer).
+			SV_SendMessageToClient( &msgBak, client );
+			return;
+		}
+
+		// Backup the msg state in case the download would overflow it
+		memcpy( &msgBak, &msg, sizeof(msgBak) );
 	}
-
-	// Backup the msg state in case the download would overflow it
-	memcpy( &msgBak, &msg, sizeof(msgBak) );
 
 	// Add any download data if the client is downloading
 	SV_WriteDownloadToClient( client, &msg );

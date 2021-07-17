@@ -49,6 +49,7 @@
 
 	TAGDEF(DOWNLOADBLACKLIST),
 	TAGDEF(AVI),						// image buffers for avi recording
+	TAGDEF(MVNET),
 
 /*	TAGDEF(SHADER),
 	TAGDEF(RMAP),

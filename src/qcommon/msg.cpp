@@ -10,6 +10,13 @@ typedef struct {
 	int		bits;		// 0 = float
 } netField_t;
 
+typedef struct {
+	char	*name;
+	size_t	offset;
+	size_t	maxSize;
+	int		bits;		// 0 = float
+} mvNetField_t;
+
 //#define _NEWHUFFTABLE_		// Build "c:\\netchan.bin"
 //#define _USINGNEWHUFFTABLE_		// Build a new frequency table to cut and paste.
 
@@ -21,6 +28,15 @@ static FILE				*fp = 0;
 #endif // _NEWHUFFTABLE_
 
 int pcount[256];
+
+// JK2MV netFields: the original jk2 1.02 / 1.03+ protocols have hardcoded sizes for fields on the server and the client.
+//                  For custom JK2MV networking we want the server to transfer the sizes of netFields to allow extending
+//                  fields beyond their previous limits (like modelindex getting networked as signed 8 bit). For that
+//                  purpose we are going to dynamically allocate netField arrays when receiving the field sizes.
+netField_t *entityStateFieldsMV;
+int entityStateFieldsMVCount;
+netField_t *playerStateFieldsMV;
+int playerStateFieldsMVCount;
 
 /*
 ==============================================================================
@@ -992,7 +1008,7 @@ identical, under the assumption that the in-order delta code will catch it.
 ==================
 */
 void MSG_WriteDeltaEntity(msg_t *msg, struct entityState_s *from, struct entityState_s *to,
-	qboolean force) {
+	qboolean force, qboolean customSizes) {
 	int			i, lc;
 	int			numFields;
 	netField_t	*field;
@@ -1000,7 +1016,9 @@ void MSG_WriteDeltaEntity(msg_t *msg, struct entityState_s *from, struct entityS
 	float		fullFloat;
 	int			*fromF, *toF;
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( customSizes && entityStateFieldsMVCount && entityStateFieldsMV )
+		numFields = entityStateFieldsMVCount;
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		numFields = sizeof(entityStateFields15) / sizeof(entityStateFields15[0]);
 	else
 		numFields = sizeof(entityStateFields16) / sizeof(entityStateFields16[0]);
@@ -1028,7 +1046,9 @@ void MSG_WriteDeltaEntity(msg_t *msg, struct entityState_s *from, struct entityS
 	lc = 0;
 	// build the change vector as bytes so it is endien independent
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( customSizes && entityStateFieldsMVCount && entityStateFieldsMV )
+		field = entityStateFieldsMV;
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		field = entityStateFields15;
 	else
 		field = entityStateFields16;
@@ -1061,7 +1081,9 @@ void MSG_WriteDeltaEntity(msg_t *msg, struct entityState_s *from, struct entityS
 
 	oldsize += numFields;
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( customSizes && entityStateFieldsMVCount && entityStateFieldsMV )
+		field = entityStateFieldsMV;
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		field = entityStateFields15;
 	else
 		field = entityStateFields16;
@@ -1164,7 +1186,9 @@ void MSG_ReadDeltaEntity(msg_t *msg, entityState_t *from, entityState_t *to,
 		return;
 	}
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( entityStateFieldsMVCount && entityStateFieldsMV )
+		numFields = entityStateFieldsMVCount;
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		numFields = sizeof(entityStateFields15) / sizeof(entityStateFields15[0]);
 	else
 		numFields = sizeof(entityStateFields16) / sizeof(entityStateFields16[0]);
@@ -1186,7 +1210,9 @@ void MSG_ReadDeltaEntity(msg_t *msg, entityState_t *from, entityState_t *to,
 	int startBytes, endBytes;
 #endif
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( entityStateFieldsMVCount && entityStateFieldsMV )
+		field = entityStateFieldsMV;
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		field = entityStateFields15;
 	else
 		field = entityStateFields16;
@@ -1243,7 +1269,9 @@ void MSG_ReadDeltaEntity(msg_t *msg, entityState_t *from, entityState_t *to,
 #endif
 	}
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( entityStateFieldsMVCount && entityStateFieldsMV )
+		field = &entityStateFieldsMV[lc];
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		field = &entityStateFields15[lc];
 	else
 		field = &entityStateFields16[lc];
@@ -1522,7 +1550,7 @@ MSG_WriteDeltaPlayerstate
 =============
 */
 
-void MSG_WriteDeltaPlayerstate(msg_t *msg, struct playerState_s *from, struct playerState_s *to) {
+void MSG_WriteDeltaPlayerstate(msg_t *msg, struct playerState_s *from, struct playerState_s *to, qboolean customSizes) {
 	int				i;
 	playerState_t	dummy;
 	int				statsbits;
@@ -1543,14 +1571,19 @@ void MSG_WriteDeltaPlayerstate(msg_t *msg, struct playerState_s *from, struct pl
 
 	c = msg->cursize;
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02) {
+	if ( customSizes && playerStateFieldsMVCount && playerStateFieldsMV ) {
+		numFields = playerStateFieldsMVCount;
+	} else if (MV_GetCurrentGameversion() == VERSION_1_02) {
 		numFields = sizeof(playerStateFields15) / sizeof(playerStateFields15[0]);
 	} else {
 		numFields = sizeof(playerStateFields16) / sizeof(playerStateFields16[0]);
 	}
 
 	lc = 0;
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+
+	if ( customSizes && playerStateFieldsMVCount && playerStateFieldsMV )
+		field = playerStateFieldsMV;
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		field = playerStateFields15;
 	else
 		field = playerStateFields16;
@@ -1567,7 +1600,9 @@ void MSG_WriteDeltaPlayerstate(msg_t *msg, struct playerState_s *from, struct pl
 
 	oldsize += numFields - lc;
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( customSizes && playerStateFieldsMVCount && playerStateFieldsMV )
+		field = playerStateFieldsMV;
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		field = playerStateFields15;
 	else
 		field = playerStateFields16;
@@ -1737,7 +1772,10 @@ void MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to
 		print = 0;
 	}
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02) {
+
+	if ( playerStateFieldsMVCount && playerStateFieldsMV ) {
+		numFields = playerStateFieldsMVCount;
+	} else if (MV_GetCurrentGameversion() == VERSION_1_02) {
 		numFields = sizeof(playerStateFields15) / sizeof(playerStateFields15[0]);
 	} else {
 		numFields = sizeof(playerStateFields16) / sizeof(playerStateFields16[0]);
@@ -1748,7 +1786,9 @@ void MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to
 	int startBytes, endBytes;
 #endif
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( playerStateFieldsMVCount && playerStateFieldsMV )
+		field = playerStateFieldsMV;
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		field = playerStateFields15;
 	else
 		field = playerStateFields16;
@@ -1796,7 +1836,9 @@ void MSG_ReadDeltaPlayerstate(msg_t *msg, playerState_t *from, playerState_t *to
 #endif
 	}
 
-	if (MV_GetCurrentGameversion() == VERSION_1_02)
+	if ( playerStateFieldsMVCount && playerStateFieldsMV )
+		field = &playerStateFieldsMV[lc];
+	else if (MV_GetCurrentGameversion() == VERSION_1_02)
 		field = &playerStateFields15[lc];
 	else
 		field = &playerStateFields16[lc];
@@ -2481,6 +2523,339 @@ void MSG_shutdownHuffman()
 		fclose(fp);
 	}
 #endif // _NEWHUFFTABLE_
+}
+
+
+// Custom JK2MV network protocol changes
+#define MVNETF(x) #x,(size_t)&((entityState_t*)0)->x, sizeof(((entityState_t*)0)->x)
+#define MVPSF(x) #x,(size_t)&((playerState_t*)0)->x, sizeof(((playerState_t*)0)->x)
+
+mvNetField_t mvEntityStateFields[] =
+{
+	{ MVNETF(pos.trTime), 32 },
+	{ MVNETF(pos.trBase[0]), 0 },
+	{ MVNETF(pos.trBase[1]), 0 },
+	{ MVNETF(pos.trDelta[0]), 0 },
+	{ MVNETF(pos.trDelta[1]), 0 },
+	{ MVNETF(pos.trBase[2]), 0 },
+	{ MVNETF(apos.trBase[1]), 0 },
+	{ MVNETF(pos.trDelta[2]), 0 },
+	{ MVNETF(apos.trBase[0]), 0 },
+	{ MVNETF(event), 10 },
+	{ MVNETF(angles2[1]), 0 },
+	{ MVNETF(eType), 8 },
+	{ MVNETF(torsoAnim), 16 },
+	{ MVNETF(forceFrame), 16 },
+	{ MVNETF(eventParm), 8 },
+	{ MVNETF(legsAnim), 16 },
+	{ MVNETF(groundEntityNum), GENTITYNUM_BITS },
+	{ MVNETF(pos.trType), 8 },
+	{ MVNETF(eFlags), 32 },
+	{ MVNETF(bolt1), 8 },
+	{ MVNETF(bolt2), GENTITYNUM_BITS },
+	{ MVNETF(trickedentindex), 16 },
+	{ MVNETF(trickedentindex2), 16 },
+	{ MVNETF(trickedentindex3), 16 },
+	{ MVNETF(trickedentindex4), 16 },
+	{ MVNETF(speed), 0 },
+	{ MVNETF(fireflag), 2 },
+	{ MVNETF(genericenemyindex), 32 },
+	{ MVNETF(activeForcePass), 6 },
+	{ MVNETF(emplacedOwner), 32 },
+	{ MVNETF(otherEntityNum), GENTITYNUM_BITS },
+	{ MVNETF(weapon), 8 },
+	{ MVNETF(clientNum), 8 },
+	{ MVNETF(angles[1]), 0 },
+	{ MVNETF(pos.trDuration), 32 },
+	{ MVNETF(apos.trType), 8 },
+	{ MVNETF(origin[0]), 0 },
+	{ MVNETF(origin[1]), 0 },
+	{ MVNETF(origin[2]), 0 },
+	{ MVNETF(solid), 24 },
+	{ MVNETF(owner), GENTITYNUM_BITS },
+	{ MVNETF(teamowner), 8 },
+	{ MVNETF(shouldtarget), 1 },
+	{ MVNETF(powerups), 16 },
+	{ MVNETF(modelGhoul2), 5 },
+	{ MVNETF(g2radius), 8 },
+	{ MVNETF(modelindex), -16 }, // increased in jk2mv (original: -8)
+	{ MVNETF(otherEntityNum2), GENTITYNUM_BITS },
+	{ MVNETF(loopSound), 8 },
+	{ MVNETF(generic1), 8 },
+	{ MVNETF(origin2[2]), 0 },
+	{ MVNETF(origin2[0]), 0 },
+	{ MVNETF(origin2[1]), 0 },
+	{ MVNETF(modelindex2), 15 }, // increased in jk2mv (original: 8)
+	{ MVNETF(angles[0]), 0 },
+	{ MVNETF(time), 32 },
+	{ MVNETF(apos.trTime), 32 },
+	{ MVNETF(apos.trDuration), 32 },
+	{ MVNETF(apos.trBase[2]), 0 },
+	{ MVNETF(apos.trDelta[0]), 0 },
+	{ MVNETF(apos.trDelta[1]), 0 },
+	{ MVNETF(apos.trDelta[2]), 0 },
+	{ MVNETF(time2), 32 },
+	{ MVNETF(angles[2]), 0 },
+	{ MVNETF(angles2[0]), 0 },
+	{ MVNETF(angles2[2]), 0 },
+	{ MVNETF(constantLight), 32 },
+	{ MVNETF(frame), 16 },
+	{ MVNETF(saberInFlight), 1 },
+	{ MVNETF(saberEntityNum), GENTITYNUM_BITS },
+	{ MVNETF(saberMove), 8 },
+	{ MVNETF(forcePowersActive), 32 },
+	{ MVNETF(isJediMaster), 1 }
+};
+
+mvNetField_t mvPlayerStateFields[] =
+{
+	{ MVPSF(commandTime), 32 },
+	{ MVPSF(origin[0]), 0 },
+	{ MVPSF(origin[1]), 0 },
+	{ MVPSF(bobCycle), 8 },
+	{ MVPSF(velocity[0]), 0 },
+	{ MVPSF(velocity[1]), 0 },
+	{ MVPSF(viewangles[1]), 0 },
+	{ MVPSF(viewangles[0]), 0 },
+	{ MVPSF(weaponTime), -16 },
+	{ MVPSF(weaponChargeTime), 32 },
+	{ MVPSF(weaponChargeSubtractTime), 32 },
+	{ MVPSF(origin[2]), 0 },
+	{ MVPSF(velocity[2]), 0 },
+	{ MVPSF(pm_time), -16 },
+	{ MVPSF(eventSequence), 16 },
+	{ MVPSF(torsoAnim), 16 },
+	{ MVPSF(torsoTimer), 16 },
+	{ MVPSF(legsAnim), 16 },
+	{ MVPSF(legsTimer), 16 },
+	{ MVPSF(movementDir), 4 },
+	{ MVPSF(events[0]), 10 },
+	{ MVPSF(events[1]), 10 },
+	{ MVPSF(pm_flags), 16 },
+	{ MVPSF(groundEntityNum), GENTITYNUM_BITS },
+	{ MVPSF(weaponstate), 4 },
+	{ MVPSF(eFlags), 32 },
+	{ MVPSF(externalEvent), 10 },
+	{ MVPSF(gravity), 16 },
+	{ MVPSF(speed), 16 },
+	{ MVPSF(basespeed), 16 },
+	{ MVPSF(delta_angles[1]), 16 },
+	{ MVPSF(externalEventParm), 8 },
+	{ MVPSF(viewheight), -8 },
+	{ MVPSF(damageEvent), 8 },
+	{ MVPSF(damageYaw), 8 },
+	{ MVPSF(damagePitch), 8 },
+	{ MVPSF(damageCount), 8 },
+	{ MVPSF(damageType), 2 },
+	{ MVPSF(generic1), 8 },
+	{ MVPSF(pm_type), 8 },
+	{ MVPSF(delta_angles[0]), 16 },
+	{ MVPSF(delta_angles[2]), 16 },
+	{ MVPSF(eventParms[0]), -16 },
+	{ MVPSF(eventParms[1]), 8 },
+	{ MVPSF(clientNum), 8 },
+	{ MVPSF(weapon), 5 },
+	{ MVPSF(viewangles[2]), 0 },
+	{ MVPSF(jumppad_ent), 10 },
+	{ MVPSF(loopSound), 16 },
+
+	{ MVPSF(zoomMode), 2 },
+	{ MVPSF(zoomTime), 32 },
+	{ MVPSF(zoomLocked), 1 },
+	{ MVPSF(zoomFov), 8 },
+
+	{ MVPSF(fd.forcePowersActive), 32 },
+	{ MVPSF(fd.forceMindtrickTargetIndex), 16 },
+	{ MVPSF(fd.forceMindtrickTargetIndex2), 16 },
+	{ MVPSF(fd.forceMindtrickTargetIndex3), 16 },
+	{ MVPSF(fd.forceMindtrickTargetIndex4), 16 },
+	{ MVPSF(fd.forceJumpZStart), 0 },
+	{ MVPSF(fd.forcePowerSelected), 8 },
+	{ MVPSF(fd.forcePowersKnown), 32 },
+	{ MVPSF(fd.forcePower), 8 },
+	{ MVPSF(fd.forceSide), 2 },
+	{ MVPSF(fd.sentryDeployed), 1 },
+	{ MVPSF(fd.forcePowerLevel[FP_LEVITATION]), 2 },
+	{ MVPSF(fd.forcePowerLevel[FP_SEE]), 2 },
+	{ MVPSF(genericEnemyIndex), 32 },
+	{ MVPSF(activeForcePass), 6 },
+	{ MVPSF(hasDetPackPlanted), 1 },
+	{ MVPSF(emplacedIndex), GENTITYNUM_BITS },
+	{ MVPSF(fd.forceRageRecoveryTime), 32 },
+	{ MVPSF(rocketLockIndex), 8 },
+	{ MVPSF(rocketLockTime), 32 },
+	{ MVPSF(rocketTargetTime), 32 },
+	{ MVPSF(holocronBits), 32 },
+	{ MVPSF(isJediMaster), 1 },
+	{ MVPSF(forceRestricted), 1 },
+	{ MVPSF(trueJedi), 1 },
+	{ MVPSF(trueNonJedi), 1 },
+	{ MVPSF(fallingToDeath), 32 },
+	{ MVPSF(electrifyTime), 32 },
+
+	{ MVPSF(fd.forcePowerDebounce[FP_LEVITATION]), 32 },
+
+	{ MVPSF(saberMove), 32 },
+	{ MVPSF(saberActive), 1 },
+	{ MVPSF(saberInFlight), 1 },
+	{ MVPSF(saberBlocked), 8 },
+	{ MVPSF(saberEntityNum), GENTITYNUM_BITS },
+	{ MVPSF(saberCanThrow), 1 },
+	{ MVPSF(forceHandExtend), 8 },
+	{ MVPSF(forceDodgeAnim), 16 },
+	{ MVPSF(fd.saberAnimLevel), 2 },
+	{ MVPSF(fd.saberDrawAnimLevel), 2 },
+	{ MVPSF(saberAttackChainCount), 4 },
+	{ MVPSF(saberHolstered), 1 },
+	{ MVPSF(usingATST), 1 },
+	{ MVPSF(atstAltFire), 1 },
+
+	{ MVPSF(duelIndex), GENTITYNUM_BITS },
+	{ MVPSF(duelTime), 32 },
+	{ MVPSF(duelInProgress), 1 },
+
+	{ MVPSF(saberLockTime), 32 },
+	{ MVPSF(saberLockEnemy), GENTITYNUM_BITS },
+	{ MVPSF(saberLockFrame), 16 },
+	{ MVPSF(saberLockAdvance), 1 },
+
+	{ MVPSF(inAirAnim), 1 },
+	{ MVPSF(dualBlade), 1 },
+
+	{ MVPSF(lastHitLoc[2]), 0 },
+	{ MVPSF(lastHitLoc[0]), 0 },
+	{ MVPSF(lastHitLoc[1]), 0 }
+};
+
+void MSG_NetSizesToMessage( msg_t *msg )
+{
+	int i;
+
+	if ( !entityStateFieldsMVCount || !entityStateFieldsMV || !playerStateFieldsMVCount || !playerStateFieldsMV )
+		MSG_BuildNetSizes();
+
+	// Start with entityFields
+	MSG_WriteByte( msg, entityStateFieldsMVCount ); // The amount of fields should never change.
+
+	// Now send all the field bits
+	for ( i = 0; i < entityStateFieldsMVCount; i++ )
+		MSG_WriteBits( msg, entityStateFieldsMV[i].bits, -8 );
+
+	// Now send the playerFields
+	MSG_WriteByte( msg, playerStateFieldsMVCount ); // The amount of fields should never change.
+
+	// Now send all the field bits
+	for ( i = 0; i < playerStateFieldsMVCount; i++ )
+		MSG_WriteBits( msg, playerStateFieldsMV[i].bits, -8 );
+}
+
+void MSG_NetSizesFromMessage( msg_t *msg )
+{
+	int i;
+	int val;
+
+	// Amount of fields
+	int numEntityFields = ARRAY_LEN( mvEntityStateFields );
+	int numPlayerFields = ARRAY_LEN( mvPlayerStateFields );
+
+	// Read entityFields
+	val = MSG_ReadByte( msg );
+	if ( val != numEntityFields ) Com_Error( ERR_FATAL, "MSG_NetSizesFromMessage: entityStateFields amount mismatch (%i != %i)", val, numEntityFields );
+
+	// Get memory for the new netField array
+	if ( entityStateFieldsMV ) Z_Free( entityStateFieldsMV );
+	entityStateFieldsMV = (netField_t*)Z_Malloc( sizeof(netField_t) * numEntityFields, TAG_MVNET, qfalse );
+	entityStateFieldsMVCount = numEntityFields;
+
+	// Read bits for each field
+	for ( i = 0; i < numEntityFields; i++ )
+	{
+		val = MSG_ReadBits( msg, -8 );
+		if ( abs(val) > mvEntityStateFields[i].maxSize * 8        // Int
+			|| (val == 0 && mvEntityStateFields[i].maxSize < 4) ) // Float
+		{
+			Com_Error( ERR_FATAL, "MSG_ReadNetSizeMV: entityStateFields[%i] incompatible with maxSize (%i, %li)", i, val, mvEntityStateFields[i].maxSize );
+		}
+
+		// Set the values
+		entityStateFieldsMV[i].name = mvEntityStateFields[i].name;
+		entityStateFieldsMV[i].offset = mvEntityStateFields[i].offset;
+		entityStateFieldsMV[i].bits = val;
+	}
+
+
+	// Read playerFields
+	val = MSG_ReadByte( msg );
+	if ( val != numPlayerFields ) Com_Error( ERR_FATAL, "MSG_NetSizesFromMessage: playerStateFields amount mismatch (%i != %i)", val, numPlayerFields );
+
+	// Get memory for the new netField array
+	if ( playerStateFieldsMV ) Z_Free( playerStateFieldsMV );
+	playerStateFieldsMV = (netField_t*)Z_Malloc( sizeof(netField_t) * numPlayerFields, TAG_MVNET, qfalse );
+	playerStateFieldsMVCount = numPlayerFields;
+
+	// Read bits for each field
+	for ( i = 0; i < numPlayerFields; i++ )
+	{
+		val = MSG_ReadBits( msg, -8 );
+		if ( abs(val) > mvPlayerStateFields[i].maxSize * 8        // Int
+			|| (val == 0 && mvPlayerStateFields[i].maxSize < 4) ) // Float
+		{
+			Com_Error( ERR_FATAL, "MSG_ReadNetSizeMV: playerStateFields[%i] incompatible with maxSize (%i, %li)", i, val, mvPlayerStateFields[i].maxSize );
+		}
+
+		// Set the values
+		playerStateFieldsMV[i].name = mvPlayerStateFields[i].name;
+		playerStateFieldsMV[i].offset = mvPlayerStateFields[i].offset;
+		playerStateFieldsMV[i].bits = val;
+	}
+}
+
+void MSG_BuildNetSizes( void )
+{
+	int i;
+
+	// Amount of fields
+	int numEntityFields = ARRAY_LEN( mvEntityStateFields );
+	int numPlayerFields = ARRAY_LEN( mvPlayerStateFields );
+
+	// Get memory for the new netField array
+	if ( entityStateFieldsMV ) Z_Free( entityStateFieldsMV );
+	entityStateFieldsMV = (netField_t*)Z_Malloc( sizeof(netField_t) * numEntityFields, TAG_MVNET, qfalse );
+	entityStateFieldsMVCount = numEntityFields;
+
+	// Read bits for each field
+	for ( i = 0; i < numEntityFields; i++ )
+	{
+		// Set the values
+		entityStateFieldsMV[i].name = mvEntityStateFields[i].name;
+		entityStateFieldsMV[i].offset = mvEntityStateFields[i].offset;
+		entityStateFieldsMV[i].bits = mvEntityStateFields[i].bits;
+	}
+
+	// Get memory for the new netField array
+	if ( playerStateFieldsMV ) Z_Free( playerStateFieldsMV );
+	playerStateFieldsMV = (netField_t*)Z_Malloc( sizeof(netField_t) * numPlayerFields, TAG_MVNET, qfalse );
+	playerStateFieldsMVCount = numPlayerFields;
+
+	// Read bits for each field
+	for ( i = 0; i < numPlayerFields; i++ )
+	{
+		// Set the values
+		playerStateFieldsMV[i].name = mvPlayerStateFields[i].name;
+		playerStateFieldsMV[i].offset = mvPlayerStateFields[i].offset;
+		playerStateFieldsMV[i].bits = mvPlayerStateFields[i].bits;
+	}
+}
+
+void MSG_ClearNetSizes( void )
+{
+	if ( entityStateFieldsMV ) Z_Free( entityStateFieldsMV );
+	entityStateFieldsMV = NULL;
+	entityStateFieldsMVCount = 0;
+
+	if ( playerStateFieldsMV ) Z_Free( playerStateFieldsMV );
+	playerStateFieldsMV = NULL;
+	playerStateFieldsMVCount = 0;
 }
 
 //===========================================================================

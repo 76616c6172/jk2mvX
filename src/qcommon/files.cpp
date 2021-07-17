@@ -1490,6 +1490,7 @@ int FS_FOpenFileReadHash(const char *filename, fileHandle_t *file, qboolean uniq
 					&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
 					&& Q_stricmp( filename + l - 5, ".game" )	// menu files
 					&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
+					&& Q_stricmp( filename + l - 7, ".dm_mv1" )	// mvdemo
 					&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
 					continue;
 				}
@@ -1508,6 +1509,7 @@ int FS_FOpenFileReadHash(const char *filename, fileHandle_t *file, qboolean uniq
 				&& Q_stricmp( filename + l - 5, ".menu" )	// menu files
 				&& Q_stricmp( filename + l - 5, ".game" )	// menu files
 				&& Q_stricmp( filename + l - strlen(demoExt), demoExt )	// menu files
+				&& Q_stricmp( filename + l - 7, ".dm_mv1" )	// mvdemo
 				&& Q_stricmp( filename + l - 4, ".dat" ) ) {	// for journal files
 				fs_fakeChkSum = qrandom();
 			}

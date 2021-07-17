@@ -170,6 +170,9 @@ typedef struct client_s {
 
 	int				lastUserInfoChange; //if > svs.time && count > x, deny change -rww
 	int				lastUserInfoCount; //allow a certain number of changes within a certain time period -rww
+
+	int				mvNetProtocol;		// Bitvalues for supported features
+	int				mvNetReady;			// Bitvalues to indicate which features of the mvNetProtocol are ready to be used
 } client_t;
 
 //=============================================================================
