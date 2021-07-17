@@ -670,8 +670,8 @@ void SV_SendClientSnapshot( client_t *client ) {
 
 	// only send entity and player states if the mvNetProtocol is either not
 	// using custom sizes or the client is ready for them
-	if (    !(client->mvNetProtocol & MV_NETPROTO_CUSTOMSIZES)
-	     || ((client->mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) && (client->mvNetReady & MV_NETPROTO_CUSTOMSIZES)) ) {
+	if ( !(client->mvNetProtocol & MV_NETPROTO_CUSTOMSIZES)
+	     || client->mvNetRequested == client->mvNetReady ) {
 		// Backup the msg state in case the snapshot would overflow it
 		memcpy( &msgBak, &msg, sizeof(msgBak) );
 

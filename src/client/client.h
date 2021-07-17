@@ -221,6 +221,7 @@ typedef struct {
 	qboolean	demowaiting;	// don't record until a non-delta message is received
 	qboolean	firstDemoFrameSkipped;
 	fileHandle_t	demofile;
+	qboolean	demoMV;
 
 	int			timeDemoFrames;		// counter of rendered frames
 	int			timeDemoStart;		// cls.realtime before first frame
@@ -233,6 +234,7 @@ typedef struct {
 	qboolean	gotStatus;
 
 	int			mvNetProtocol;
+	int			mvNetAcking;
 	int			mvNetReady;
 } clientConnection_t;
 
@@ -479,6 +481,7 @@ void CL_Disconnect_f (void);
 void CL_GetChallengePacket (void);
 void CL_Vid_Restart_f( void );
 void CL_Snd_Restart_f (void);
+void CL_StopRecord_f( void );
 void CL_StartDemoLoop( void );
 void CL_NextDemo( void );
 void CL_ReadDemoMessage( void );

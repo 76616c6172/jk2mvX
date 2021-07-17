@@ -295,7 +295,14 @@ gotnewcl:
 	// Save the mvNetProtocol
 	newcl->mvNetProtocol = atoi( Info_ValueForKey( userinfo, "mvnetproto" ) );
 	newcl->mvNetProtocol &= MV_NETPROTO_SUPPORTED;
+	newcl->mvNetRequested = 0;
 	newcl->mvNetReady = 0;
+
+	// If the map requires it request custom net sizes
+	if ( (newcl->mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) && sv.needCustomNetSize ) {
+		newcl->mvNetRequested |= MV_NETPROTO_CUSTOMSIZES;
+		newcl->mvNetRequestCustomSizes = 1;
+	}
 
 	// save the address
 	Netchan_Setup (NS_SERVER, &newcl->netchan , from, qport);
@@ -1562,26 +1569,39 @@ void SV_ExecuteClientMessage( client_t *cl, msg_t *msg ) {
 	cl->reliableAcknowledge = MSG_ReadLong( msg );
 
 	// Send custom netFields
-	if ( (cl->mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) && !(cl->mvNetReady & MV_NETPROTO_CUSTOMSIZES) ) {
+	if ( cl->mvNetRequestCustomSizes && !(cl->mvNetReady & MV_NETPROTO_CUSTOMSIZES) ) {
 		c = MSG_ReadByte( msg );
 		if ( c == clc_mvnet_sizes_ack ) {
 			// Client acknowledges our sizes
-			cl->mvNetReady |= MV_NETPROTO_CUSTOMSIZES;
+			if ( cl->mvNetRequestCustomSizes > 0 ) {
+				// We asked the client to use our custom netField sizes and we got an ack
+				cl->mvNetReady |= MV_NETPROTO_CUSTOMSIZES;
+			} else {
+				// We asked the client to revert to classic protocol and we got an ack
+				cl->mvNetRequested &= ~MV_NETPROTO_CUSTOMSIZES;
+			}
+			cl->mvNetRequestCustomSizes = 0;
 			Com_DPrintf( "SV_ExecuteClientMessage: %i acknowledged netproto sizes\n", (int)(cl-svs.clients) );
-		} else {
+		} else if ( cl->mvNetRequestCustomSizesTime < Com_Milliseconds() ) {
 			// Ignore anything from the client and send sizes
 			msg_t msgSv;
 			byte msgBuffer[MAX_MSGLEN];
 			MSG_Init( &msgSv, msgBuffer, sizeof( msgBuffer ) );
 			MSG_WriteLong( &msgSv, cl->lastClientCommand );
 			MSG_WriteByte( &msgSv, svc_mvnet_sizes );
-			MSG_NetSizesToMessage( &msgSv );
-			MSG_WriteByte( &msgSv, svc_EOF );
+			if ( cl->mvNetRequestCustomSizes > 0 ) {
+				MSG_WriteByte( &msgSv, 1 );
+				MSG_NetSizesToMessage( &msgSv );
+			} else {
+				MSG_WriteByte( &msgSv, 0 );
+			}
 			SV_SendMessageToClient( &msgSv, cl );
 
+			cl->mvNetRequestCustomSizesTime = Com_Milliseconds() + 500; // Only send twice per second
+
 			Com_DPrintf( "SV_ExecuteClientMessage: sending netproto sizes to %i\n", (int)(cl-svs.clients) );
-			return;
 		}
+		return;
 	}
 
 	// NOTE: when the client message is fux0red the acknowledgement numbers

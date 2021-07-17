@@ -75,7 +75,7 @@ typedef struct {
 	int				resetServerTime;	// Reset sv.time on map change.
 										// 0 = cvar, 1 = always, 2 = never
 	qboolean		vmPlayerSnapshots;
-	qboolean		submodelBypass;
+	qboolean		needCustomNetSize;
 } server_t;
 
 typedef struct {
@@ -172,7 +172,10 @@ typedef struct client_s {
 	int				lastUserInfoCount; //allow a certain number of changes within a certain time period -rww
 
 	int				mvNetProtocol;		// Bitvalues for supported features
+	int				mvNetRequested;		// Bitvalues for features the server requested the client to enable
 	int				mvNetReady;			// Bitvalues to indicate which features of the mvNetProtocol are ready to be used
+	int				mvNetRequestCustomSizes;
+	int				mvNetRequestCustomSizesTime;
 } client_t;
 
 //=============================================================================
@@ -378,7 +381,6 @@ qboolean	SV_inPVS (const vec3_t p1, const vec3_t p2);
 
 qboolean SV_MVAPI_ControlFixes(int fixes);
 qboolean SV_MVAPI_EnablePlayerSnapshots(qboolean enable);
-qboolean SV_MVAPI_EnableSubmodelBypass(qboolean enable);
 
 //
 // sv_bot.c

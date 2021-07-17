@@ -1100,8 +1100,6 @@ intptr_t SV_GameSystemCalls( intptr_t *args ) {
 			return (int)SV_MVAPI_ResetServerTime((qboolean)!!args[1]);
 		case G_MVAPI_ENABLE_PLAYERSNAPSHOTS:
 			return (int)SV_MVAPI_EnablePlayerSnapshots((qboolean)!!args[1]);
-		case G_MVAPI_ENABLE_SUBMODELBYPASS:
-			return SV_MVAPI_EnableSubmodelBypass( (qboolean)!!args[1] );
 		}
 	}
 
@@ -1125,7 +1123,7 @@ void SV_ShutdownGameProgs( void ) {
 	gvm = NULL;
 	sv.fixes = MVFIX_NONE;
 	sv.vmPlayerSnapshots = qfalse;
-	sv.submodelBypass = qfalse;
+	sv.needCustomNetSize = qfalse;
 }
 
 /*
@@ -1284,14 +1282,4 @@ enable / disable whether to call the gvm before generating each snapshot
 qboolean SV_MVAPI_EnablePlayerSnapshots(qboolean enable) {
 	sv.vmPlayerSnapshots = enable;
 	return qfalse;
-}
-
-/*
-====================
-SV_MVAPI_EnableSubmodelBypass
-====================
-*/
-qboolean SV_MVAPI_EnableSubmodelBypass(qboolean enable) {
-	sv.submodelBypass = enable;
-	return sv.submodelBypass;
 }

@@ -155,7 +155,6 @@ typedef enum
 
     // -713: qboolean trap_MVAPI_EnableSubmodelBypass(qboolean enable);
     CG_MVAPI_ENABLE_SUBMODELBYPASS,                                             // CGAME
-    G_MVAPI_ENABLE_SUBMODELBYPASS = CG_MVAPI_ENABLE_SUBMODELBYPASS              // GAME
 } mvSyscall_t;
 // ----------------------------------------------------------------------------------------- //
 

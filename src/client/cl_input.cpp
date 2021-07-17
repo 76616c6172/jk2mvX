@@ -906,9 +906,11 @@ void CL_WritePacket( void ) {
 	// write the last reliable message we received
 	MSG_WriteLong( &buf, clc.serverCommandSequence );
 
-	if ( (clc.mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) && (clc.mvNetReady & MV_NETPROTO_CUSTOMSIZES) && cls.state == CA_CONNECTED ) {
+	if ( ((clc.mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) && (clc.mvNetReady & MV_NETPROTO_CUSTOMSIZES) && cls.state == CA_CONNECTED)
+	  || (clc.mvNetAcking & MV_NETPROTO_CUSTOMSIZES) ) {
 		// Acknowledge the custom protocol
 		MSG_WriteByte( &buf, clc_mvnet_sizes_ack );
+		clc.mvNetAcking &= ~MV_NETPROTO_CUSTOMSIZES;
 	}
 
 	// write any unacknowledged clientCommands

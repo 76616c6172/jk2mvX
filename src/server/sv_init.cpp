@@ -600,6 +600,9 @@ Ghoul2 Insert End
 	FS_Restart( sv.checksumFeed );
 
 	CM_LoadMap( va("maps/%s.bsp", server), qfalse, &checksum );
+	if ( CM_NumInlineModels() > 256 ) {
+		sv.needCustomNetSize = qtrue;
+	}
 
 	SV_SendMapChange();
 
@@ -620,11 +623,6 @@ Ghoul2 Insert End
 
 	// load and spawn all other entities
 	SV_InitGameProgs();
-
-	// If the game module didn't announce it can handle it we want to abort now
-	if ( CM_NumInlineModels() > MAX_SUBMODELS && !sv.submodelBypass ) {
-		Com_Error( ERR_DROP, "MAX_SUBMODELS exceeded" );
-	}
 
 	// don't allow a map_restart if game is modified
 	sv_gametype->modified = qfalse;
@@ -667,6 +665,15 @@ Ghoul2 Insert End
 					// when we get the next packet from a connected client,
 					// the new gamestate will be sent
 					svs.clients[i].state = CS_CONNECTED;
+
+					if ( sv.needCustomNetSize || (svs.clients[i].mvNetReady & MV_NETPROTO_CUSTOMSIZES) ) {
+						// If the map requires it request custom net sizes. If it doesn't revert the client to default protocol
+						if ( (svs.clients[i].mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) ) {
+							svs.clients[i].mvNetReady &= ~MV_NETPROTO_CUSTOMSIZES;
+							svs.clients[i].mvNetRequested |= MV_NETPROTO_CUSTOMSIZES;
+							svs.clients[i].mvNetRequestCustomSizes = sv.needCustomNetSize ? 1 : -1;
+						}
+					}
 				}
 				else {
 					client_t		*client;

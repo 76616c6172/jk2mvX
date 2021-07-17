@@ -771,10 +771,33 @@ void CL_ParseServerMessage( msg_t *msg ) {
 			if ( !(clc.mvNetProtocol & MV_NETPROTO_CUSTOMSIZES) )
 				Com_Error (ERR_DROP,"CL_ParseServerMessage: unexpected server message (svc_mvnet_sizes)");
 
-			MSG_NetSizesFromMessage( msg );
-			clc.mvNetReady |= MV_NETPROTO_CUSTOMSIZES;
+			switch ( MSG_ReadByte(msg) ) {
+				// FIXME: prefer using a byte here to keep alignment even though a bit would be enough?
+				case 1:
+					// Use custom sizes specified by the server
+					MSG_NetSizesFromMessage( msg );
+					clc.mvNetReady |= MV_NETPROTO_CUSTOMSIZES;
+					break;
+				case 0:
+					// Clear custom sizes: fallback to whatever the default is
+					MSG_ClearNetSizes();
+					clc.mvNetReady &= ~MV_NETPROTO_CUSTOMSIZES;
+					break;
+				default:
+					Com_Error( ERR_DROP, "CL_ParseServerMessage: invalid mode (svc_mvnet_sizes)" );
+					break;
+			}
+
+			if ( clc.demorecording && !clc.demoMV ) {
+				// If we are recording a demo and it's not a dm_mv demo file we have to abort the recording, because the
+				// old format doesn't support custom field sizes...
+				// FIXME: Instead of stopping the demo we could convert the demo to the new format...
+				CL_StopRecord_f();
+				Com_Printf( "CL_ParseServerMessage: stopping demo recording due to net protocol change\n" );
+			}
 
 			Com_DPrintf( "CL_ParseServerMessage: received netproto sizes\n" );
+			clc.mvNetAcking |= MV_NETPROTO_CUSTOMSIZES;
 			CL_WritePacket(); // Acknowledge right away
 			break;
 		case svc_mapchange:

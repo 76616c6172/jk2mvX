@@ -157,7 +157,6 @@ void demoAutoSaveLast_f(void) {
 	}
 }
 
-extern void CL_StopRecord_f( void );
 void demoAutoComplete(void) {
 	char newName[MAX_OSPATH];
 	CL_StopRecord_f();

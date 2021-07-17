@@ -368,10 +368,13 @@ void CL_Record_f( void ) {
 	}
 	#endif
 
-	if ( clc.mvNetProtocol ) {
+	if ( clc.mvNetReady ) {
+		// Only use custom demos when required
 		demoExt = "dm_mv1";
+		clc.demoMV = qtrue;
 	} else {
 		demoExt = va( "dm_%d", MV_GetCurrentProtocol() );
+		clc.demoMV = qfalse;
 	}
 
 	if ( Cmd_Argc() == 2 ) {
@@ -414,16 +417,8 @@ void CL_Record_f( void ) {
 	// don't start saving messages until a non-delta compressed message is received
 	clc.demowaiting = qtrue;
 
-	// write out the gamestate message
-	MSG_Init (&buf, bufData, sizeof(bufData));
-	MSG_Bitstream(&buf);
-
-	// NOTE, MRE: all server->client messages now acknowledge
-	MSG_WriteLong( &buf, clc.reliableSequence );
-
 	// write custom netproto if required
-	if ( clc.mvNetProtocol ) {
-		// write mvNetProtocol value so we don't need to change the format again when we add more feature
+	if ( clc.demoMV ) {
 		int val = LittleLong( MV_GetCurrentGameversion() );
 		FS_Write( &val, 4, clc.demofile );
 
@@ -433,13 +428,34 @@ void CL_Record_f( void ) {
 		val = LittleLong( clc.mvNetReady );
 		FS_Write( &val, 4, clc.demofile );
 
+		MSG_Init( &buf, bufData, sizeof(bufData) );
+		MSG_Bitstream( &buf );
+
+		MSG_WriteLong( &buf, clc.reliableSequence );
+
 		// write custom sizes to demo
 		if ( clc.mvNetReady & MV_NETPROTO_CUSTOMSIZES ) {
 			//MSG_WriteLong( &buf, clc.reliableSequence );
 			MSG_WriteByte( &buf, svc_mvnet_sizes );
+			MSG_WriteByte( &buf, 1 );
 			MSG_NetSizesToMessage( &buf );
+			MSG_WriteByte( &buf, svc_EOF );
 		}
+
+		len = LittleLong( clc.serverMessageSequence - 2 );
+		FS_Write( &len, 4, clc.demofile);
+
+		len = LittleLong( buf.cursize );
+		FS_Write( &len, 4, clc.demofile );
+		FS_Write( buf.data, buf.cursize, clc.demofile );
 	}
+
+	// write out the gamestate message
+	MSG_Init (&buf, bufData, sizeof(bufData));
+	MSG_Bitstream(&buf);
+
+	// NOTE, MRE: all server->client messages now acknowledge
+	MSG_WriteLong( &buf, clc.reliableSequence );
 
 	MSG_WriteByte (&buf, svc_gamestate);
 	MSG_WriteLong (&buf, clc.serverCommandSequence );
@@ -681,14 +697,17 @@ void CL_PlayDemo_f( void ) {
 		rLen = FS_Read( &val, 4, clc.demofile );
 		if ( rLen != 4 ) Com_Error( ERR_FATAL, "CL_PlayDemo_f: invalid .dm_mv1 demo file " );
 		//clc.mvNetReady = LittleLong( val );
-		Com_Printf( "^4>>>>>>>>>>>> ^1%i, %i\n", MV_GetCurrentGameversion(), clc.mvNetProtocol );
+
+		clc.demoMV = qtrue;
 	}
 	else if ( !Q_stricmp( name + strlen(name) - strlen(".dm_15"), ".dm_15" ) ) {
 		MV_SetCurrentGameversion(VERSION_1_02);
 		demoCheckFor103 = true;	//if this demo happens to be a 1.03 demo, check for that in CL_ParseGamestate
+		clc.demoMV = qfalse;
 	}
 	else if ( !Q_stricmp( name + strlen(name) - strlen(".dm_16"), ".dm_16" ) ) {
 		MV_SetCurrentGameversion(VERSION_1_04);
+		clc.demoMV = qfalse;
 	}
 
 	// read demo messages until connected
